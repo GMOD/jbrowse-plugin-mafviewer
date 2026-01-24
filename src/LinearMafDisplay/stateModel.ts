@@ -8,6 +8,7 @@ import {
   getSession,
   max,
   measureText,
+  SessionWithWidgets,
 } from '@jbrowse/core/util'
 import { getRpcSessionId } from '@jbrowse/core/util/tracks'
 import { ascending } from 'd3-array'
@@ -111,7 +112,7 @@ export default function stateModelFactory(
       /**
        * #volatile
        */
-      volatileTree: undefined as any,
+      volatileTree: undefined as NodeWithIds | undefined,
       /**
        * #volatile
        */
@@ -155,7 +156,13 @@ export default function stateModelFactory(
       /**
        * #action
        */
-      setSamples({ samples, tree }: { samples: Sample[]; tree: unknown }) {
+      setSamples({
+        samples,
+        tree,
+      }: {
+        samples: Sample[]
+        tree: NodeWithIds | undefined
+      }) {
         if (!deepEqual(samples, self.volatileSamples)) {
           self.volatileSamples = samples
         }
@@ -201,23 +208,28 @@ export default function stateModelFactory(
         pos: number
       }) {
         const { sequence, sampleLabel, chr, pos } = insertionData
-        const session = getSession(self)
-        const featureWidget = session.addWidget('BaseFeatureWidget', 'baseFeature', {
-          featureData: {
-            uniqueId: `insertion-${chr}-${pos}-${sampleLabel}`,
-            type: 'insertion',
-            refName: chr,
-            start: pos,
-            end: pos + 1,
-            sample: sampleLabel,
-            insertionLength: sequence.length,
-            sequence: self.showAsUpperCase
-              ? sequence.toUpperCase()
-              : sequence.toLowerCase(),
+        const session = getSession(self) as SessionWithWidgets
+        const featureWidget = session.addWidget(
+          'BaseFeatureWidget',
+          'baseFeature',
+          {
+            featureData: {
+              uniqueId: `insertion-${chr}-${pos}-${sampleLabel}`,
+              type: 'insertion',
+              refName: chr,
+              start: pos,
+              end: pos + 1,
+              sample: sampleLabel,
+              insertionLength: sequence.length,
+              sequence: self.showAsUpperCase
+                ? sequence.toUpperCase()
+                : sequence.toLowerCase(),
+            },
+            view: getContainingView(self),
+            track: getContainingTrack(self),
           },
-          view: getContainingView(self),
-          track: getContainingTrack(self),
-        })
+        )
+
         session.showWidget(featureWidget)
       },
     }))
@@ -253,8 +265,7 @@ export default function stateModelFactory(
       get root() {
         return self.volatileTree
           ? hierarchy(self.volatileTree, d => d.children)
-              // todo: investigate whether needed, typescript says children always true
-              .sum(d => (d.children ? 0 : 1))
+              .sum(d => (d.children?.length ? 0 : 1))
               .sort((a, b) => ascending(a.data.length || 1, b.data.length || 1))
           : undefined
       },
@@ -456,6 +467,33 @@ export default function stateModelFactory(
     .views(self => ({
       /**
        * #getter
+       * Get highlight regions from connected MSA views
+       */
+      get msaHighlights() {
+        const session = getSession(self)
+        const view = getContainingView(self)
+        const highlights: { refName: string; start: number; end: number }[] = []
+
+        // Find MSA views that are connected to our parent view
+        for (const v of session.views) {
+          if (
+            (v as { type?: string }).type === 'MsaView' &&
+            (v as { connectedViewId?: string }).connectedViewId === view.id
+          ) {
+            const msaView = v as {
+              connectedHighlights?: { refName: string; start: number; end: number }[]
+            }
+            if (msaView.connectedHighlights) {
+              for (const h of msaView.connectedHighlights) {
+                highlights.push(h)
+              }
+            }
+          }
+        }
+        return highlights
+      },
+      /**
+       * #getter
        */
       get svgFontSize() {
         return Math.min(Math.max(self.rowHeight, 8), 14)
@@ -502,7 +540,7 @@ export default function stateModelFactory(
                       self.setMessage(message)
                     }
                   },
-                })) as { samples: Sample[]; tree: unknown },
+                })) as { samples: Sample[]; tree: NodeWithIds | undefined },
               )
             } catch (e) {
               console.error(e)

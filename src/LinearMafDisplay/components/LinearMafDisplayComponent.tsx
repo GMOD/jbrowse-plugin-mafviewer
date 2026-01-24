@@ -1,18 +1,69 @@
-import React, { useRef, useState } from 'react'
+import React, { useRef } from 'react'
 
 import { Menu } from '@jbrowse/core/ui'
-import { getContainingView, getEnv } from '@jbrowse/core/util'
+import { getContainingView, getEnv, getSession } from '@jbrowse/core/util'
 import { useTheme } from '@mui/material'
 import { observer } from 'mobx-react'
 
 import Crosshairs from './Crosshairs'
-import SequenceDialog from './GetSequenceDialog/GetSequenceDialog'
 import MAFTooltip from './MAFTooltip'
 import YScaleBars from './Sidebar/YScaleBars'
 import { useDragSelection } from './useDragSelection'
 
 import type { LinearMafDisplayModel } from '../stateModel'
 import type { LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
+
+const MsaHighlightOverlay = observer(function MsaHighlightOverlay({
+  model,
+  view,
+  height,
+}: {
+  model: LinearMafDisplayModel
+  view: LinearGenomeViewModel
+  height: number
+}) {
+  const { msaHighlights } = model
+  if (msaHighlights.length === 0) {
+    return null
+  }
+
+  const { offsetPx } = view
+  const displayedRegion = view.displayedRegions[0]
+  if (!displayedRegion) {
+    return null
+  }
+
+  return (
+    <>
+      {msaHighlights.map((highlight, idx) => {
+        // Check if highlight is on the displayed refName
+        if (highlight.refName !== displayedRegion.refName) {
+          return null
+        }
+
+        const startPx = (highlight.start - displayedRegion.start) / view.bpPerPx - offsetPx
+        const endPx = (highlight.end - displayedRegion.start) / view.bpPerPx - offsetPx
+        const widthPx = Math.max(endPx - startPx, 2)
+
+        return (
+          <div
+            key={idx}
+            style={{
+              position: 'absolute',
+              left: startPx,
+              top: 0,
+              width: widthPx,
+              height,
+              backgroundColor: 'rgba(255, 165, 0, 0.4)',
+              border: '1px solid rgba(255, 165, 0, 0.8)',
+              pointerEvents: 'none',
+            }}
+          />
+        )
+      })}
+    </>
+  )
+})
 
 const LinearMafDisplay = observer(function (props: {
   model: LinearMafDisplayModel
@@ -22,6 +73,7 @@ const LinearMafDisplay = observer(function (props: {
   const { height, scrollTop, samples: sources } = model
   const ref = useRef<HTMLDivElement>(null)
   const theme = useTheme()
+  const session = getSession(model)
 
   const LinearGenomePlugin = pluginManager.getPlugin(
     'LinearGenomeViewPlugin',
@@ -44,15 +96,8 @@ const LinearMafDisplay = observer(function (props: {
     clearSelectionBox,
   } = useDragSelection(ref)
 
-  const [showSequenceDialog, setShowSequenceDialog] = useState(false)
-  const [selectionCoords, setSelectionCoords] = useState<
-    | {
-        dragStartX: number
-        dragEndX: number
-      }
-    | undefined
-  >()
-  const { width } = getContainingView(model) as LinearGenomeViewModel
+  const view = getContainingView(model) as LinearGenomeViewModel
+  const { width } = view
 
   return (
     <div
@@ -69,11 +114,11 @@ const LinearMafDisplay = observer(function (props: {
     >
       <BaseLinearDisplayComponent {...props} />
       {model.showSidebar ? <YScaleBars model={model} /> : null}
+      <MsaHighlightOverlay model={model} view={view} height={height} />
       {mouseY !== undefined &&
       mouseX !== undefined &&
       sources &&
-      !contextCoord &&
-      !showSequenceDialog ? (
+      !contextCoord ? (
         <div style={{ position: 'relative' }}>
           <Crosshairs
             width={width}
@@ -138,28 +183,32 @@ const LinearMafDisplay = observer(function (props: {
                 return
               }
 
-              setSelectionCoords({
-                dragStartX: contextCoord.dragStartX,
-                dragEndX: contextCoord.dragEndX,
-              })
+              const { refName, assemblyName } = view.displayedRegions[0]!
+              const [s, e] = [
+                Math.min(contextCoord.dragStartX, contextCoord.dragEndX),
+                Math.max(contextCoord.dragStartX, contextCoord.dragEndX),
+              ]
 
-              setShowSequenceDialog(true)
+              const widget = session.addWidget('MafSequenceWidget', 'mafSequence')
+              widget.setData({
+                adapterConfig: model.adapterConfig,
+                samples: model.samples,
+                regions: [
+                  {
+                    refName,
+                    start: view.pxToBp(s).coord - 1,
+                    end: view.pxToBp(e).coord,
+                    assemblyName,
+                  },
+                ],
+                connectedViewId: view.id,
+              })
+              session.showWidget(widget)
               setContextCoord(undefined)
             },
           },
         ]}
       />
-
-      {showSequenceDialog ? (
-        <SequenceDialog
-          model={model}
-          selectionCoords={selectionCoords}
-          onClose={() => {
-            setShowSequenceDialog(false)
-            setSelectionCoords(undefined)
-          }}
-        />
-      ) : null}
     </div>
   )
 })

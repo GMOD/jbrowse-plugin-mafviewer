@@ -3,6 +3,11 @@ import { Sample } from '../LinearMafDisplay/types'
 import type { AlignmentRecord } from '../LinearMafRenderer/rendering'
 import type { Feature, Region } from '@jbrowse/core/util'
 
+interface InsertionInfo {
+  sequence: string
+  sampleIndex: number
+}
+
 /**
  * Process features into FASTA format
  * @param features - The features to process
@@ -14,12 +19,14 @@ export function processFeaturesToFasta({
   showAllLetters,
   samples,
   features,
+  includeInsertions,
 }: {
   regions: Region[]
   samples: Sample[]
   showAsUpperCase?: boolean
   mismatchRendering?: boolean
   showAllLetters?: boolean
+  includeInsertions?: boolean
   features: Map<string, Feature>
 }) {
   const region = regions[0]!
@@ -28,6 +35,10 @@ export function processFeaturesToFasta({
 
   // Use character arrays instead of strings for O(1) mutations
   const outputRowsArrays = samples.map(() => new Array(rlen).fill('-'))
+
+  // Track insertions at each position if includeInsertions is enabled
+  // Key is the reference position (0-based relative to region), value is array of insertions
+  const insertionsAtPosition = new Map<number, InsertionInfo[]>()
 
   for (const feature of features.values()) {
     const leftCoord = feature.get('start')
@@ -43,7 +54,7 @@ export function processFeaturesToFasta({
 
       const rowArray = outputRowsArrays[row]!
 
-      // Single-pass processing: handle gaps, matches, and mismatches together
+      // Single-pass processing: handle gaps, matches, mismatches, and collect insertions
       for (let i = 0, o = 0, l = alignment.length; i < l; i++) {
         if (seq[i] !== '-') {
           const c = alignment[i]
@@ -67,7 +78,93 @@ export function processFeaturesToFasta({
             }
           }
           o++
+        } else if (includeInsertions) {
+          // This is an insertion (reference has gap)
+          // Collect all consecutive insertion characters
+          let insertionSequence = ''
+          while (i < alignment.length && seq[i] === '-') {
+            const c = alignment[i]
+            if (c !== '-' && c !== ' ') {
+              insertionSequence += c
+            } else {
+              insertionSequence += '-'
+            }
+            i++
+          }
+          i-- // Back up one since the outer loop will increment
+
+          if (insertionSequence.length > 0) {
+            // Position is relative to region start, insertions come after position o-1
+            // (or before position 0 if o is 0)
+            const insertPos = leftCoord + o - region.start
+            if (insertPos >= 0 && insertPos <= rlen) {
+              const existing = insertionsAtPosition.get(insertPos) || []
+              existing.push({ sequence: insertionSequence, sampleIndex: row })
+              insertionsAtPosition.set(insertPos, existing)
+            }
+          }
         }
+      }
+    }
+  }
+
+  if (includeInsertions && insertionsAtPosition.size > 0) {
+    return expandWithInsertions(
+      outputRowsArrays,
+      insertionsAtPosition,
+      samples.length,
+    )
+  }
+
+  // Convert character arrays back to strings
+  return outputRowsArrays.map(arr => arr.join(''))
+}
+
+/**
+ * Expand sequences to include insertions
+ * At each position with insertions, find the max insertion length,
+ * then expand all sequences by that amount
+ */
+function expandWithInsertions(
+  outputRowsArrays: string[][],
+  insertionsAtPosition: Map<number, InsertionInfo[]>,
+  numSamples: number,
+) {
+  // Sort insertion positions in descending order so we can insert from right to left
+  // without affecting earlier positions
+  const sortedPositions = [...insertionsAtPosition.keys()].sort((a, b) => b - a)
+
+  for (const pos of sortedPositions) {
+    const insertions = insertionsAtPosition.get(pos)!
+
+    // Find max insertion length at this position
+    let maxLen = 0
+    for (const ins of insertions) {
+      if (ins.sequence.length > maxLen) {
+        maxLen = ins.sequence.length
+      }
+    }
+
+    // Create a map from sample index to insertion sequence
+    const sampleInsertions = new Map<number, string>()
+    for (const ins of insertions) {
+      sampleInsertions.set(ins.sampleIndex, ins.sequence)
+    }
+
+    // Insert characters at this position for each sample
+    for (let sampleIdx = 0; sampleIdx < numSamples; sampleIdx++) {
+      const rowArray = outputRowsArrays[sampleIdx]!
+      const insertionSeq = sampleInsertions.get(sampleIdx)
+
+      if (insertionSeq) {
+        // This sample has an insertion - add it, padded with gaps if needed
+        const paddedInsertion = insertionSeq.padEnd(maxLen, '-')
+        // Insert after position `pos`
+        rowArray.splice(pos, 0, ...paddedInsertion.split(''))
+      } else {
+        // No insertion for this sample - fill with gaps
+        const gaps = new Array(maxLen).fill('-')
+        rowArray.splice(pos, 0, ...gaps)
       }
     }
   }

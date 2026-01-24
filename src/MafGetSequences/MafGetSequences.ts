@@ -21,6 +21,7 @@ export default class MafGetSequences extends RpcMethodTypeWithFiltersAndRenameRe
       headers?: Record<string, string>
       regions: Region[]
       showAllLetters: boolean
+      includeInsertions?: boolean
     },
     rpcDriverClassName: string,
   ) {
@@ -28,8 +29,14 @@ export default class MafGetSequences extends RpcMethodTypeWithFiltersAndRenameRe
       args,
       rpcDriverClassName,
     )
-    const { samples, regions, adapterConfig, sessionId, showAllLetters } =
-      deserializedArgs
+    const {
+      samples,
+      regions,
+      adapterConfig,
+      sessionId,
+      showAllLetters,
+      includeInsertions,
+    } = deserializedArgs
     const dataAdapter = (
       await getAdapter(this.pluginManager, sessionId, adapterConfig)
     ).dataAdapter as BaseFeatureDataAdapter
@@ -42,6 +49,7 @@ export default class MafGetSequences extends RpcMethodTypeWithFiltersAndRenameRe
       samples,
       regions,
       showAllLetters,
+      includeInsertions,
     })
   }
 }
