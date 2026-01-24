@@ -29,7 +29,7 @@ const LinearMafRendering = observer(function (props: {
   const { items, displayModel, height, samples, flatbush } = props
   const ref = useRef<HTMLDivElement>(null)
   const flatbush2 = useMemo(() => Flatbush.from(flatbush), [flatbush])
-  const [isOverLargeInsertion, setIsOverLargeInsertion] = useState(false)
+  const [isOverInsertion, setIsOverInsertion] = useState(false)
 
   const getFeatureUnderMouse = useCallback(
     (eventClientX: number, eventClientY: number) => {
@@ -68,7 +68,7 @@ const LinearMafRendering = observer(function (props: {
       ref={ref}
       onClick={e => {
         const feature = getFeatureUnderMouse(e.clientX, e.clientY)
-        if (feature?.isLargeInsertion) {
+        if (feature?.isInsertion) {
           displayModel.showInsertionSequenceDialog?.({
             sequence: feature.base,
             sampleLabel: feature.sampleLabel,
@@ -83,18 +83,18 @@ const LinearMafRendering = observer(function (props: {
         displayModel.setHighlightedRowNames?.(
           feature?.sampleId ? [feature.sampleId] : undefined,
         )
-        setIsOverLargeInsertion(!!feature?.isLargeInsertion)
+        setIsOverInsertion(!!feature?.isInsertion)
       }}
       onMouseLeave={() => {
         displayModel.setHoveredInfo?.(undefined)
         displayModel.setHighlightedRowNames?.(undefined)
-        setIsOverLargeInsertion(false)
+        setIsOverInsertion(false)
       }}
       style={{
         overflow: 'visible',
         position: 'relative',
         height,
-        cursor: isOverLargeInsertion ? 'pointer' : 'default',
+        cursor: isOverInsertion ? 'pointer' : 'default',
       }}
     >
       <PrerenderedCanvas

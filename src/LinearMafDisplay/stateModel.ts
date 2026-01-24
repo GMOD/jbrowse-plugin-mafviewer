@@ -206,10 +206,11 @@ export default function stateModelFactory(
           featureData: {
             uniqueId: `insertion-${chr}-${pos}-${sampleLabel}`,
             type: 'insertion',
+            refName: chr,
+            start: pos,
+            end: pos + 1,
             sample: sampleLabel,
-            chr,
-            position: pos,
-            length: sequence.length,
+            insertionLength: sequence.length,
             sequence: self.showAsUpperCase
               ? sequence.toUpperCase()
               : sequence.toLowerCase(),

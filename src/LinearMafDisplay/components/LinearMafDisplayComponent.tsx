@@ -82,7 +82,11 @@ const LinearMafDisplay = observer(function (props: {
             mouseX={mouseX}
             mouseY={mouseY}
           />
-          <MAFTooltip model={model} mouseX={mouseX} origMouseX={dragStartX} />
+          <MAFTooltip
+            model={model}
+            mouseX={mouseX}
+            origMouseX={isDragging ? dragStartX : undefined}
+          />
         </div>
       ) : null}
       {(isDragging || showSelectionBox) &&

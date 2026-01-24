@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
+const MIN_DRAG_DISTANCE = 3
+
 interface DragSelectionState {
   isDragging: boolean
   dragStartX: number | undefined
@@ -82,7 +84,7 @@ export function useDragSelection(
       if (isDragging && dragStartX !== undefined && dragEndX !== undefined) {
         const dragDistanceX = Math.abs(dragEndX - dragStartX)
 
-        if (dragDistanceX >= 2) {
+        if (dragDistanceX > MIN_DRAG_DISTANCE) {
           setContextCoord({
             coord: [event.clientX, event.clientY],
             dragEndX: event.clientX,
@@ -130,8 +132,14 @@ export function useDragSelection(
     }
   }, [ref, showSelectionBox, clearSelectionBox])
 
+  const dragDistance =
+    dragStartX !== undefined && dragEndX !== undefined
+      ? Math.abs(dragEndX - dragStartX)
+      : 0
+  const hasDraggedEnough = dragDistance > MIN_DRAG_DISTANCE
+
   return {
-    isDragging,
+    isDragging: isDragging && hasDraggedEnough,
     dragStartX,
     dragEndX,
     showSelectionBox,
