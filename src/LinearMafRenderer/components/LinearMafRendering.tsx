@@ -4,16 +4,25 @@ import { PrerenderedCanvas } from '@jbrowse/core/ui'
 import Flatbush from 'flatbush'
 import { observer } from 'mobx-react'
 
-import { Sample } from '../../LinearMafDisplay/types'
-import { RenderedBase } from '../rendering'
+import type { Sample } from '../../LinearMafDisplay/types'
+import type { RenderedBase } from '../rendering'
 
-type SerializedRBush = any
+interface DisplayModel {
+  setHoveredInfo?: (info: Record<string, unknown> | undefined) => void
+  setHighlightedRowNames?: (names: string[] | undefined) => void
+  showInsertionSequenceDialog?: (data: {
+    sequence: string
+    sampleLabel: string
+    chr: string
+    pos: number
+  }) => void
+}
 
 const LinearMafRendering = observer(function (props: {
   width: number
   height: number
-  displayModel: any
-  flatbush: SerializedRBush
+  displayModel: DisplayModel
+  flatbush: ArrayBuffer
   items: RenderedBase[]
   samples: Sample[]
 }) {
@@ -27,23 +36,28 @@ const LinearMafRendering = observer(function (props: {
       let offsetX = 0
       let offsetY = 0
       if (ref.current) {
-        const r = ref.current.getBoundingClientRect()
-        offsetX = eventClientX - r.left
-        offsetY = eventClientY - r.top
+        const rect = ref.current.getBoundingClientRect()
+        offsetX = eventClientX - rect.left
+        offsetY = eventClientY - rect.top
       }
 
-      const x = flatbush2.search(offsetX, offsetY, offsetX + 1, offsetY + 1)
-      if (x.length) {
-        const elt = x.find(idx => items[idx]?.isInsertion)
-        const r = elt !== undefined ? items[elt]! : items[x[0]!]!
-        const s = samples[r.sampleId]
-        return {
-          ...r,
-          sampleId: s?.id ?? 'unknown',
-          sampleLabel: s?.label || s?.id || 'unknown',
-        }
-      } else {
+      const hits = flatbush2.search(offsetX, offsetY, offsetX + 1, offsetY + 1)
+      if (hits.length === 0) {
         return undefined
+      }
+
+      const insertionHit = hits.find(idx => items[idx]?.isInsertion)
+      const hitIdx = insertionHit ?? hits[0]
+      const item = hitIdx !== undefined ? items[hitIdx] : undefined
+      if (!item) {
+        return undefined
+      }
+
+      const sample = samples[item.rowIndex]
+      return {
+        ...item,
+        sampleId: sample?.id ?? 'unknown',
+        sampleLabel: sample?.label || sample?.id || 'unknown',
       }
     },
     [flatbush2, items, samples],

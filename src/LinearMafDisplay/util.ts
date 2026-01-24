@@ -11,6 +11,7 @@ export interface HoveredInfo {
   base: string
   chr: string
   isInsertion?: boolean
+  isLargeInsertion?: boolean
   [key: string]: unknown
 }
 

@@ -1,7 +1,14 @@
 import { lazy } from 'react'
 
 import { ConfigurationReference, getConf } from '@jbrowse/core/configuration'
-import { getEnv, getSession, max, measureText } from '@jbrowse/core/util'
+import {
+  getContainingTrack,
+  getContainingView,
+  getEnv,
+  getSession,
+  max,
+  measureText,
+} from '@jbrowse/core/util'
 import { getRpcSessionId } from '@jbrowse/core/util/tracks'
 import { ascending } from 'd3-array'
 import { cluster, hierarchy } from 'd3-hierarchy'
@@ -24,10 +31,6 @@ import type { Instance } from 'mobx-state-tree'
 
 const SetRowHeightDialog = lazy(
   () => import('./components/SetRowHeightDialog/SetRowHeightDialog'),
-)
-
-const InsertionSequenceDialog = lazy(
-  () => import('./components/InsertionSequenceDialog/InsertionSequenceDialog'),
 )
 
 /**
@@ -197,14 +200,24 @@ export default function stateModelFactory(
         chr: string
         pos: number
       }) {
-        getSession(self).queueDialog(handleClose => [
-          InsertionSequenceDialog,
-          {
-            model: self,
-            onClose: handleClose,
-            insertionData,
+        const { sequence, sampleLabel, chr, pos } = insertionData
+        const session = getSession(self)
+        const featureWidget = session.addWidget('BaseFeatureWidget', 'baseFeature', {
+          featureData: {
+            uniqueId: `insertion-${chr}-${pos}-${sampleLabel}`,
+            type: 'insertion',
+            sample: sampleLabel,
+            chr,
+            position: pos,
+            length: sequence.length,
+            sequence: self.showAsUpperCase
+              ? sequence.toUpperCase()
+              : sequence.toLowerCase(),
           },
-        ])
+          view: getContainingView(self),
+          track: getContainingTrack(self),
+        })
+        session.showWidget(featureWidget)
       },
     }))
     .views(self => ({

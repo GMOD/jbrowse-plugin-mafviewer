@@ -23,7 +23,7 @@ export function renderInsertions(
   leftPx: number,
   rowTop: number,
   bpPerPx: number,
-  sampleId: number,
+  rowIndex: number,
   alignmentStart: number,
   chr: string,
 ) {
@@ -146,7 +146,7 @@ export function renderInsertions(
             pos: genomicOffset + alignmentStart,
             chr,
             base: insertionSequence,
-            sampleId,
+            rowIndex,
             isInsertion: true,
             isLargeInsertion,
           },
