@@ -109,7 +109,7 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
     session,
   ])
 
-  const sequenceTooLarge = sequence ? sequence.length > 1_000_000 : false
+  const sequenceTooLarge = sequence ? sequence.length > 5_000_000 : false
 
   if (!adapterConfig || !samples || !regions) {
     return (
@@ -247,30 +247,31 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
         <ErrorMessage error={error} />
       ) : (
         <>
-          {loading ? <LoadingEllipses /> : null}
-          <TextField
-            variant="outlined"
-            multiline
-            minRows={5}
-            maxRows={15}
-            disabled={sequenceTooLarge}
-            fullWidth
-            value={
-              loading
-                ? 'Loading...'
-                : sequenceTooLarge
+          {loading ? (
+            <LoadingEllipses />
+          ) : (
+            <TextField
+              variant="outlined"
+              multiline
+              minRows={5}
+              maxRows={15}
+              disabled={sequenceTooLarge}
+              fullWidth
+              value={
+                sequenceTooLarge
                   ? 'Reference sequence too large to display, use the Download button'
                   : sequence
-            }
-            slotProps={{
-              input: {
-                readOnly: true,
-                classes: {
-                  input: classes.textAreaInput,
+              }
+              slotProps={{
+                input: {
+                  readOnly: true,
+                  classes: {
+                    input: classes.textAreaInput,
+                  },
                 },
-              },
-            }}
-          />
+              }}
+            />
+          )}
         </>
       )}
     </Paper>

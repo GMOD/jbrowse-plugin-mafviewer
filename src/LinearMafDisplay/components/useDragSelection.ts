@@ -48,6 +48,9 @@ export function useDragSelection(
 
   const handleMouseDown = useCallback(
     (event: React.MouseEvent) => {
+      if (event.shiftKey) {
+        return
+      }
       const rect = ref.current?.getBoundingClientRect()
       const left = rect?.left || 0
       const clientX = event.clientX - left
