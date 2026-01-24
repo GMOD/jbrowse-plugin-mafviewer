@@ -2,20 +2,20 @@ import { lazy } from 'react'
 
 import { ConfigurationReference, getConf } from '@jbrowse/core/configuration'
 import {
+  SessionWithWidgets,
   getContainingTrack,
   getContainingView,
   getEnv,
   getSession,
   max,
   measureText,
-  SessionWithWidgets,
 } from '@jbrowse/core/util'
 import { getRpcSessionId } from '@jbrowse/core/util/tracks'
+import { addDisposer, isAlive, types } from '@jbrowse/mobx-state-tree'
 import { ascending } from 'd3-array'
 import { cluster, hierarchy } from 'd3-hierarchy'
 import deepEqual from 'fast-deep-equal'
 import { autorun } from 'mobx'
-import { addDisposer, isAlive, types } from 'mobx-state-tree'
 
 import { computeNodeDescendantNames, maxLength, setBrLength } from './util'
 import { normalize } from '../util'
@@ -26,9 +26,18 @@ import type {
   AnyConfigurationModel,
   AnyConfigurationSchemaType,
 } from '@jbrowse/core/configuration'
+import type { Instance } from '@jbrowse/mobx-state-tree'
 import type { ExportSvgDisplayOptions } from '@jbrowse/plugin-linear-genome-view'
 import type { HierarchyNode } from 'd3-hierarchy'
-import type { Instance } from 'mobx-state-tree'
+
+const defaultRowHeight = 15
+const defaultRowProportion = 0.8
+const defaultShowAllLetters = false
+const defaultMismatchRendering = true
+const defaultShowBranchLen = false
+const defaultTreeAreaWidth = 80
+const defaultShowAsUpperCase = true
+const defaultShowSidebar = true
 
 const SetRowHeightDialog = lazy(
   () => import('./components/SetRowHeightDialog/SetRowHeightDialog'),
@@ -63,37 +72,37 @@ export default function stateModelFactory(
         /**
          * #property
          */
-        rowHeight: 15,
+        rowHeight: defaultRowHeight,
         /**
          * #property
          */
-        rowProportion: 0.8,
+        rowProportion: defaultRowProportion,
         /**
          * #property
          */
-        showAllLetters: false,
+        showAllLetters: defaultShowAllLetters,
         /**
          * #property
          */
-        mismatchRendering: true,
+        mismatchRendering: defaultMismatchRendering,
 
         /**
          * #property
          */
-        showBranchLen: false,
+        showBranchLen: defaultShowBranchLen,
 
         /**
          * #property
          */
-        treeAreaWidth: 80,
+        treeAreaWidth: defaultTreeAreaWidth,
         /**
          * #property
          */
-        showAsUpperCase: true,
+        showAsUpperCase: defaultShowAsUpperCase,
         /**
          * #property
          */
-        showSidebar: true,
+        showSidebar: defaultShowSidebar,
       }),
     )
     .volatile(() => ({
@@ -481,7 +490,11 @@ export default function stateModelFactory(
             (v as { connectedViewId?: string }).connectedViewId === view.id
           ) {
             const msaView = v as {
-              connectedHighlights?: { refName: string; start: number; end: number }[]
+              connectedHighlights?: {
+                refName: string
+                start: number
+                end: number
+              }[]
             }
             if (msaView.connectedHighlights) {
               for (const h of msaView.connectedHighlights) {
@@ -537,7 +550,7 @@ export default function stateModelFactory(
                   adapterConfig: self.adapterConfig,
                   statusCallback: (message: string) => {
                     if (isAlive(self)) {
-                      self.setMessage(message)
+                      self.setStatusMessage(message)
                     }
                   },
                 })) as { samples: Sample[]; tree: NodeWithIds | undefined },
@@ -561,6 +574,43 @@ export default function stateModelFactory(
           const { renderSvg } = await import('./renderSvg')
           return renderSvg(self, opts, superRenderSvg)
         },
+      }
+    })
+    .postProcessSnapshot(snap => {
+      const {
+        rowHeight,
+        rowProportion,
+        showAllLetters,
+        mismatchRendering,
+        showBranchLen,
+        treeAreaWidth,
+        showAsUpperCase,
+        showSidebar,
+        ...rest
+      } = snap as typeof snap & {
+        rowHeight?: number
+        rowProportion?: number
+        showAllLetters?: boolean
+        mismatchRendering?: boolean
+        showBranchLen?: boolean
+        treeAreaWidth?: number
+        showAsUpperCase?: boolean
+        showSidebar?: boolean
+      }
+      return {
+        ...(rest as Omit<typeof rest, symbol>),
+        ...(rowHeight !== defaultRowHeight ? { rowHeight } : {}),
+        ...(rowProportion !== defaultRowProportion ? { rowProportion } : {}),
+        ...(showAllLetters !== defaultShowAllLetters ? { showAllLetters } : {}),
+        ...(mismatchRendering !== defaultMismatchRendering
+          ? { mismatchRendering }
+          : {}),
+        ...(showBranchLen !== defaultShowBranchLen ? { showBranchLen } : {}),
+        ...(treeAreaWidth !== defaultTreeAreaWidth ? { treeAreaWidth } : {}),
+        ...(showAsUpperCase !== defaultShowAsUpperCase
+          ? { showAsUpperCase }
+          : {}),
+        ...(showSidebar !== defaultShowSidebar ? { showSidebar } : {}),
       }
     })
 }

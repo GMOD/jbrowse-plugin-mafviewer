@@ -1,69 +1,23 @@
 import React, { useRef } from 'react'
 
 import { Menu } from '@jbrowse/core/ui'
-import { getContainingView, getEnv, getSession } from '@jbrowse/core/util'
+import {
+  getContainingView,
+  getEnv,
+  getSession,
+  isSessionModelWithWidgets,
+} from '@jbrowse/core/util'
 import { useTheme } from '@mui/material'
 import { observer } from 'mobx-react'
 
 import Crosshairs from './Crosshairs'
 import MAFTooltip from './MAFTooltip'
+import MsaHighlightOverlay from './MsaHighlightOverlay'
 import YScaleBars from './Sidebar/YScaleBars'
 import { useDragSelection } from './useDragSelection'
 
 import type { LinearMafDisplayModel } from '../stateModel'
 import type { LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
-
-const MsaHighlightOverlay = observer(function MsaHighlightOverlay({
-  model,
-  view,
-  height,
-}: {
-  model: LinearMafDisplayModel
-  view: LinearGenomeViewModel
-  height: number
-}) {
-  const { msaHighlights } = model
-  if (msaHighlights.length === 0) {
-    return null
-  }
-
-  const { offsetPx } = view
-  const displayedRegion = view.displayedRegions[0]
-  if (!displayedRegion) {
-    return null
-  }
-
-  return (
-    <>
-      {msaHighlights.map((highlight, idx) => {
-        // Check if highlight is on the displayed refName
-        if (highlight.refName !== displayedRegion.refName) {
-          return null
-        }
-
-        const startPx = (highlight.start - displayedRegion.start) / view.bpPerPx - offsetPx
-        const endPx = (highlight.end - displayedRegion.start) / view.bpPerPx - offsetPx
-        const widthPx = Math.max(endPx - startPx, 2)
-
-        return (
-          <div
-            key={idx}
-            style={{
-              position: 'absolute',
-              left: startPx,
-              top: 0,
-              width: widthPx,
-              height,
-              backgroundColor: 'rgba(255, 165, 0, 0.4)',
-              border: '1px solid rgba(255, 165, 0, 0.8)',
-              pointerEvents: 'none',
-            }}
-          />
-        )
-      })}
-    </>
-  )
-})
 
 const LinearMafDisplay = observer(function (props: {
   model: LinearMafDisplayModel
@@ -189,21 +143,26 @@ const LinearMafDisplay = observer(function (props: {
                 Math.max(contextCoord.dragStartX, contextCoord.dragEndX),
               ]
 
-              const widget = session.addWidget('MafSequenceWidget', 'mafSequence')
-              widget.setData({
-                adapterConfig: model.adapterConfig,
-                samples: model.samples,
-                regions: [
+              if (isSessionModelWithWidgets(session)) {
+                const widget = session.addWidget(
+                  'MafSequenceWidget',
+                  'mafSequence',
                   {
-                    refName,
-                    start: view.pxToBp(s).coord - 1,
-                    end: view.pxToBp(e).coord,
-                    assemblyName,
+                    adapterConfig: model.adapterConfig,
+                    samples: model.samples,
+                    regions: [
+                      {
+                        refName,
+                        start: view.pxToBp(s).coord - 1,
+                        end: view.pxToBp(e).coord,
+                        assemblyName,
+                      },
+                    ],
+                    connectedViewId: view.id,
                   },
-                ],
-                connectedViewId: view.id,
-              })
-              session.showWidget(widget)
+                )
+                session.showWidget(widget)
+              }
               setContextCoord(undefined)
             },
           },

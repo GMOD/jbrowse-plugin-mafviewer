@@ -19,9 +19,7 @@ export function downloadAsFile(
   onError?: (e: unknown) => void,
 ) {
   try {
-    const url = URL.createObjectURL(
-      new Blob([content], { type: 'text/plain' }),
-    )
+    const url = URL.createObjectURL(new Blob([content], { type: 'text/plain' }))
     const a = document.createElement('a')
     a.href = url
     a.download = filename

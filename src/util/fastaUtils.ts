@@ -84,11 +84,7 @@ export function processFeaturesToFasta({
           let insertionSequence = ''
           while (i < alignment.length && seq[i] === '-') {
             const c = alignment[i]
-            if (c !== '-' && c !== ' ') {
-              insertionSequence += c
-            } else {
-              insertionSequence += '-'
-            }
+            insertionSequence += c !== '-' && c !== ' ' ? c : '-'
             i++
           }
           i-- // Back up one since the outer loop will increment

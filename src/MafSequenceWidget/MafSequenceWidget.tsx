@@ -21,7 +21,7 @@ import type { MafSequenceWidgetModel } from './stateModelFactory'
 
 function hasMsaViewPlugin() {
   // @ts-expect-error
-  return typeof window.JBrowsePluginMsaView !== 'undefined'
+  return globalThis.JBrowsePluginMsaView !== undefined
 }
 
 const useStyles = makeStyles()(theme => ({
@@ -164,9 +164,15 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
             onClick={() => {
               copyToClipboard(
                 sequence,
-                () => session.notify('Sequence copied to clipboard', 'info'),
-                e => session.notifyError(`${e}`, e),
-              )
+                () => {
+                  session.notify('Sequence copied to clipboard', 'info')
+                },
+                e => {
+                  session.notifyError(`${e}`, e)
+                },
+              ).catch((e: unknown) => {
+                console.error(e)
+              })
             }}
           >
             Copy
@@ -180,8 +186,12 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
               downloadAsFile(
                 sequence,
                 'sequence.fasta',
-                () => session.notify('Sequence downloaded', 'info'),
-                e => session.notifyError(`${e}`, e),
+                () => {
+                  session.notify('Sequence downloaded', 'info')
+                },
+                e => {
+                  session.notifyError(`${e}`, e)
+                },
               )
             }}
           >
@@ -192,49 +202,52 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
               variant="contained"
               size="small"
               disabled={loading || !sequence}
-              onClick={async () => {
-                try {
-                  const region = regions?.[0]
-                  const refSample = samples?.[0]
+              onClick={() => {
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                ;(async () => {
+                  try {
+                    const region = regions[0]
+                    const refSample = samples[0]
 
-                  // Always fetch with showAllLetters=true for MSA view
-                  // (dots don't work well with MSA color schemes)
-                  let msaSequence = sequence
-                  if (!showAllLetters) {
-                    const { rpcManager } = session
-                    const fastaSequence = (await rpcManager.call(
-                      'MafSequenceWidget',
-                      'MafGetSequences',
-                      {
-                        sessionId: 'MafSequenceWidget',
-                        adapterConfig,
-                        samples,
-                        showAllLetters: true,
-                        includeInsertions,
-                        regions,
+                    // Always fetch with showAllLetters=true for MSA view
+                    // (dots don't work well with MSA color schemes)
+                    let msaSequence = sequence
+                    if (!showAllLetters) {
+                      const { rpcManager } = session
+                      const fastaSequence = (await rpcManager.call(
+                        'MafSequenceWidget',
+                        'MafGetSequences',
+                        {
+                          sessionId: 'MafSequenceWidget',
+                          adapterConfig,
+                          samples,
+                          showAllLetters: true,
+                          includeInsertions,
+                          regions,
+                        },
+                      )) as string[]
+                      msaSequence = fastaSequence
+                        .map((r, idx) => `>${samples[idx]!.label}\n${r}`)
+                        .join('\n')
+                    }
+
+                    session.addView('MsaView', {
+                      type: 'MsaView',
+                      displayName: region
+                        ? `MAF MSA - ${region.refName}:${region.start + 1}-${region.end}`
+                        : 'MAF MSA',
+                      connectedViewId,
+                      mafRegion: region,
+                      querySeqName: refSample?.label,
+                      init: {
+                        msaData: msaSequence,
                       },
-                    )) as string[]
-                    msaSequence = fastaSequence
-                      .map((r, idx) => `>${samples![idx]!.label}\n${r}`)
-                      .join('\n')
+                    })
+                  } catch (e) {
+                    console.error(e)
+                    session.notifyError(`${e}`, e)
                   }
-
-                  session.addView('MsaView', {
-                    type: 'MsaView',
-                    displayName: region
-                      ? `MAF MSA - ${region.refName}:${region.start + 1}-${region.end}`
-                      : 'MAF MSA',
-                    connectedViewId,
-                    mafRegion: region,
-                    querySeqName: refSample?.label,
-                    init: {
-                      msaData: msaSequence,
-                    },
-                  })
-                } catch (e) {
-                  console.error(e)
-                  session.notifyError(`${e}`, e)
-                }
+                })()
               }}
             >
               Open in MSA View
