@@ -5,6 +5,8 @@ import { Button, DialogActions, DialogContent, TextField } from '@mui/material'
 import { observer } from 'mobx-react'
 import { makeStyles } from 'tss-react/mui'
 
+import { copyToClipboard } from '../../../util/clipboard'
+
 const useStyles = makeStyles()({
   dialogContent: {
     width: '60em',
@@ -78,18 +80,12 @@ const InsertionSequenceDialog = observer(function ({
           variant="contained"
           color="primary"
           onClick={() => {
-            // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            ;(async () => {
-              try {
-                await navigator.clipboard.writeText(displaySequence)
-                setCopied(true)
-                setTimeout(() => {
-                  setCopied(false)
-                }, 1000)
-              } catch (e) {
-                console.error(e)
-              }
-            })()
+            copyToClipboard(displaySequence, () => {
+              setCopied(true)
+              setTimeout(() => {
+                setCopied(false)
+              }, 1000)
+            })
           }}
         >
           {copied ? 'Copied!' : 'Copy to Clipboard'}

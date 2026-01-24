@@ -10,7 +10,8 @@ export interface HoveredInfo {
   pos: number
   base: string
   chr: string
-  [key: string]: unknown // Allow additional properties for compatibility
+  isInsertion?: boolean
+  [key: string]: unknown
 }
 
 export interface GenomicPosition {
@@ -75,12 +76,36 @@ export function setBrLength(
   y0: number,
   k: number,
 ) {
+  const newY0 = y0 + Math.max(d.data.length || 0, 0)
   // @ts-expect-error
-  d.len = (y0 += Math.max(d.data.length || 0, 0)) * k
+  d.len = newY0 * k
 
   if (d.children) {
-    d.children.forEach(d => {
-      setBrLength(d, y0, k)
-    })
+    for (const child of d.children) {
+      setBrLength(child, newY0, k)
+    }
   }
+}
+
+export function computeNodeDescendantNames<T extends { name: string }>(
+  root: HierarchyNode<T>,
+): Map<HierarchyNode<T>, string[]> {
+  const map = new Map<HierarchyNode<T>, string[]>()
+  function visit(node: HierarchyNode<T>): string[] {
+    if (!node.children || node.children.length === 0) {
+      const names = [node.data.name]
+      map.set(node, names)
+      return names
+    }
+    const names: string[] = []
+    for (const child of node.children) {
+      for (const name of visit(child)) {
+        names.push(name)
+      }
+    }
+    map.set(node, names)
+    return names
+  }
+  visit(root)
+  return map
 }

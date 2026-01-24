@@ -16,10 +16,7 @@ const MAFTooltip = observer(function ({
   mouseX,
   origMouseX,
 }: {
-  mouseY: number
   mouseX: number
-  rowHeight: number
-  sources: Record<string, any>[]
   model: LinearMafDisplayModel
   origMouseX?: number
 }) {

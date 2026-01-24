@@ -9,7 +9,7 @@ import deepEqual from 'fast-deep-equal'
 import { autorun } from 'mobx'
 import { addDisposer, isAlive, types } from 'mobx-state-tree'
 
-import { maxLength, setBrLength } from './util'
+import { computeNodeDescendantNames, maxLength, setBrLength } from './util'
 import { normalize } from '../util'
 
 import type { NodeWithIds, NodeWithIdsAndLength, Sample } from './types'
@@ -264,7 +264,8 @@ export default function stateModelFactory(
           for (const node of r.descendants()) {
             node.x = node.x! + self.rowHeight / 2
           }
-          setBrLength(r, (r.data.length = 0), width / maxLength(r))
+          r.data.length = 0
+          setBrLength(r, 0, width / maxLength(r))
           return r as HierarchyNode<NodeWithIdsAndLength>
         } else {
           return undefined
@@ -311,26 +312,10 @@ export default function stateModelFactory(
        * Precomputed map from hierarchy node to its descendant leaf names
        */
       get nodeDescendantNames() {
-        const map = new Map<unknown, string[]>()
-        function computeDescendants(
-          node: HierarchyNode<NodeWithIdsAndLength>,
-        ): string[] {
-          if (!node.children || node.children.length === 0) {
-            const names = [node.data.name]
-            map.set(node, names)
-            return names
-          }
-          const names: string[] = []
-          for (const child of node.children) {
-            names.push(...computeDescendants(child))
-          }
-          map.set(node, names)
-          return names
-        }
         if (this.hierarchy) {
-          computeDescendants(this.hierarchy)
+          return computeNodeDescendantNames(this.hierarchy)
         }
-        return map
+        return new Map<HierarchyNode<NodeWithIdsAndLength>, string[]>()
       },
       /**
        * #getter
@@ -370,7 +355,7 @@ export default function stateModelFactory(
           return {
             ...s,
             notReady:
-              (!self.volatileSamples && !self.volatileTree) || super.notReady,
+              (!self.volatileSamples && !self.volatileTree) || s.notReady,
             config: rendererConfig,
             samples,
             rowHeight,

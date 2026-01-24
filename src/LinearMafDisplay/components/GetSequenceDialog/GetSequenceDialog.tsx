@@ -13,6 +13,7 @@ import {
 import { observer } from 'mobx-react'
 import { makeStyles } from 'tss-react/mui'
 
+import { copyToClipboard } from '../../../util/clipboard'
 import { useSequences } from '../../../util/useSequences'
 
 import type { LinearMafDisplayModel } from '../../stateModel'
@@ -81,19 +82,11 @@ const GetSequenceDialog = observer(function ({
             color="primary"
             disabled={loading || !sequence}
             onClick={() => {
-              // eslint-disable-next-line @typescript-eslint/no-floating-promises
-              ;(async () => {
-                try {
-                  await navigator.clipboard.writeText(sequence)
-                  getSession(model).notify(
-                    'Sequence copied to clipboard',
-                    'info',
-                  )
-                } catch (e) {
-                  console.error(e)
-                  getSession(model).notifyError(`${e}`, e)
-                }
-              })()
+              copyToClipboard(
+                sequence,
+                () => getSession(model).notify('Sequence copied to clipboard', 'info'),
+                e => getSession(model).notifyError(`${e}`, e),
+              )
             }}
           >
             Copy to Clipboard

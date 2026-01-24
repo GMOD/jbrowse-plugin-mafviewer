@@ -62,7 +62,7 @@
     "vitest": "^4.0.5"
   },
   "dependencies": {
-    "@gmod/bgzf-filehandle": "^5.0.2",
+    "@gmod/bgzf-filehandle": "^6.0.12",
     "abortable-promise-cache": "^1.5.0",
     "buffer": "^6.0.3",
     "d3-array": "^3.2.4",
