@@ -39,6 +39,15 @@ const useStyles = makeStyles()(theme => ({
     fontFamily: 'monospace',
     whiteSpace: 'pre',
     overflowX: 'auto',
+    overflowY: 'auto',
+  },
+  textField: {
+    '& .MuiInputBase-root': {
+      overflow: 'auto',
+    },
+    '& textarea': {
+      overflow: 'auto !important',
+    },
   },
   buttons: {
     display: 'flex',
@@ -220,7 +229,6 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
                     querySeqName: refSample?.label,
                     init: {
                       msaData: msaSequence,
-                      colorSchemeName: 'percent_identity',
                     },
                   })
                 } catch (e) {
@@ -257,6 +265,7 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
               maxRows={15}
               disabled={sequenceTooLarge}
               fullWidth
+              className={classes.textField}
               value={
                 sequenceTooLarge
                   ? 'Reference sequence too large to display, use the Download button'
