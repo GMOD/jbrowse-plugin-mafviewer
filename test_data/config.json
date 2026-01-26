@@ -45,9 +45,54 @@
           }
         }
       }
+    },
+    {
+      "name": "Anc0",
+      "sequence": {
+        "type": "ReferenceSequenceTrack",
+        "trackId": "Anc0-refseq",
+        "adapter": {
+          "type": "FromConfigSequenceAdapter",
+          "features": [
+            {
+              "refName": "Anc0refChr0",
+              "uniqueId": "Anc0refChr0",
+              "start": 0,
+              "end": 4151
+            }
+          ]
+        }
+      }
     }
   ],
   "tracks": [
+    {
+      "trackId": "evolverMammals-bigMaf",
+      "name": "evolverMammals (BigMaf)",
+      "type": "MafTrack",
+      "assemblyNames": ["Anc0"],
+      "adapter": {
+        "type": "BigMafAdapter",
+        "bigBedLocation": {
+          "uri": "evolverMammals.bigMaf.bb"
+        }
+      }
+    },
+    {
+      "trackId": "evolverMammals-taf",
+      "name": "evolverMammals (TAF)",
+      "type": "MafTrack",
+      "assemblyNames": ["Anc0"],
+      "adapter": {
+        "type": "BgzipTaffyAdapter",
+        "tafGzLocation": {
+          "uri": "evolverMammals.taf.gz"
+        },
+        "taiLocation": {
+          "uri": "evolverMammals.taf.gz.tai"
+        }
+      }
+    },
     {
       "trackId": "MAF",
       "name": "100-way alignment (chr21:5010000)",

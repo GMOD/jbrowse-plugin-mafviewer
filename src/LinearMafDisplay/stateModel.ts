@@ -364,11 +364,45 @@ export default function stateModelFactory(
           const width = self.treeAreaWidth
           // Use totalHeight - rowHeight so leaves are centered in rows
           // (first leaf at rowHeight/2, last at totalHeight - rowHeight/2)
+          // Debug: check tree structure before clustering
+          const preClusterLeaves = r.leaves()
+          console.log('DEBUG pre-cluster - leaf count:', preClusterLeaves.length)
+          console.log('DEBUG pre-cluster - tree depth:', r.height)
+
+          // Check if all leaves are actually leaves (no children)
+          const leavesWithChildren = preClusterLeaves.filter(l => l.children && l.children.length > 0)
+          console.log('DEBUG pre-cluster - leaves with children (should be 0):', leavesWithChildren.length)
+
           const clust = cluster<NodeWithIds>()
             .size([this.totalHeight - self.rowHeight, width])
             .separation(() => 1)
           clust(r)
-          // Offset all nodes by rowHeight/2 to center in rows
+
+          // Debug: check actual vs expected leaf positions (BEFORE offset)
+          const leaves = r.leaves()
+          if (leaves.length > 0) {
+            const xValues = leaves.map(l => l.x!)
+            const minX = Math.min(...xValues)
+            const maxX = Math.max(...xValues)
+
+            // Check all node x values (not just leaves)
+            const allNodes = r.descendants()
+            const allX = allNodes.map(n => n.x!)
+            const globalMinX = Math.min(...allX)
+            const globalMaxX = Math.max(...allX)
+
+            console.log('DEBUG post-cluster (before offset):')
+            console.log('  leaf min x:', minX.toFixed(2), 'max x:', maxX.toFixed(2))
+            console.log('  ALL nodes min x:', globalMinX.toFixed(2), 'max x:', globalMaxX.toFixed(2))
+            console.log('  expected leaf range: 0 to', ((leaves.length - 1) * self.rowHeight).toFixed(2))
+
+            // Check if internal nodes extend beyond leaf range
+            if (globalMinX < minX || globalMaxX > maxX) {
+              console.log('  WARNING: internal nodes extend beyond leaf range!')
+            }
+          }
+
+          // Now apply the offset
           for (const node of r.descendants()) {
             node.x = node.x! + self.rowHeight / 2
           }
@@ -396,6 +430,33 @@ export default function stateModelFactory(
         } else {
           samples = self.volatileSamples
         }
+
+        // Debug: check for mismatches between tree and data
+        const treeLeafNames = new Set(this.rowNames || [])
+        const volatileSampleNames = new Set(
+          self.volatileSamples?.map(s => s.id) || [],
+        )
+        const inTreeNotInData = [...treeLeafNames].filter(
+          n => !volatileSampleNames.has(n),
+        )
+        const inDataNotInTree = [...volatileSampleNames].filter(
+          n => !treeLeafNames.has(n),
+        )
+        console.log('DEBUG samples - tree leaf count:', treeLeafNames.size)
+        console.log(
+          'DEBUG samples - volatileSamples count:',
+          volatileSampleNames.size,
+        )
+        console.log(
+          'DEBUG samples - in tree but not in data:',
+          inTreeNotInData.length,
+          inTreeNotInData.slice(0, 5),
+        )
+        console.log(
+          'DEBUG samples - in data but not in tree:',
+          inDataNotInTree.length,
+          inDataNotInTree.slice(0, 5),
+        )
 
         if (samples && self.subtreeFilter) {
           const filterSet = new Set(self.subtreeFilter)
@@ -601,6 +662,20 @@ export default function stateModelFactory(
        */
       get svgFontSize() {
         return Math.min(Math.max(self.rowHeight, 8), 14)
+      },
+      /**
+       * #getter
+       * Returns the y position for each sample based on actual leaf positions from hierarchy
+       */
+      get sampleYPositions(): number[] {
+        const leaves = self.hierarchy?.leaves()
+        if (!leaves) {
+          // Fallback to linear positioning
+          return (self.samples || []).map(
+            (_, idx) => idx * self.rowHeight + self.rowHeight / 2,
+          )
+        }
+        return leaves.map(leaf => leaf.x!)
       },
       /**
        * #getter

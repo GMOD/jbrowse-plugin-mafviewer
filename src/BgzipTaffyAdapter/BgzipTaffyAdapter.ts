@@ -39,6 +39,21 @@ interface SetupData {
 
 const toP = (s = 0) => +s.toFixed(1)
 
+// Binary search to find the index of the first element >= target
+function lowerBound<T>(arr: T[], target: number, getKey: (item: T) => number) {
+  let lo = 0
+  let hi = arr.length
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1
+    if (getKey(arr[mid]!) < target) {
+      lo = mid + 1
+    } else {
+      hi = mid
+    }
+  }
+  return lo
+}
+
 export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   public setupP?: Promise<SetupData>
 
@@ -381,29 +396,18 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     runLengthEncodeBases: boolean,
   ) {
     const records = byteRanges[query.refName]
-    if (records) {
-      let firstEntry
-      let nextEntry
+    if (records && records.length > 0) {
+      // Use binary search for better performance with large indexes
+      const getKey = (r: (typeof records)[0]) => r.chrStart
 
-      // two pass:
-      // first pass: find first block greater than query start, then -1 from
-      // that
-      for (let i = 0; i < records.length; i++) {
-        if (records[i]!.chrStart >= query.start) {
-          firstEntry = records[Math.max(i - 1, 0)]
-          break
-        }
-      }
-      // second pass: find first block where query end less than record start,
-      // and +1 from that
-      for (let i = 0; i < records.length; i++) {
-        if (query.end <= records[i]!.chrStart) {
-          nextEntry = records[i + 1]
-          break
-        }
-      }
+      // Find first entry: the block containing or just before query.start
+      const startIdx = lowerBound(records, query.start, getKey)
+      const firstEntry = records[Math.max(startIdx - 1, 0)]
 
-      nextEntry = nextEntry ?? records.at(-1)
+      // Find next entry: the block after query.end
+      const endIdx = lowerBound(records, query.end, getKey)
+      const nextEntry = records[endIdx + 1] ?? records.at(-1)
+
       // we NEED at least a firstEntry (validate behavior?) because otherwise
       // it fetches whole file when you request e.g. out of range region
       if (firstEntry && nextEntry) {

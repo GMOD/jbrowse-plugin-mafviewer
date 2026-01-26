@@ -21,6 +21,7 @@ const ColorLegend = observer(function ({
     samples = [],
     rowHeight,
     svgFontSize,
+    sampleYPositions,
   } = model
   const boxHeight = Math.min(20, rowHeight)
 
@@ -34,7 +35,7 @@ const ColorLegend = observer(function ({
         {samples.map((sample, idx) => (
           <RectBg
             key={`${sample.id}-${idx}`}
-            y={idx * rowHeight}
+            y={sampleYPositions[idx]! - rowHeight / 2}
             x={0}
             width={labelWidth + 5}
             height={boxHeight}
@@ -48,7 +49,7 @@ const ColorLegend = observer(function ({
                 dominantBaseline="middle"
                 fontSize={svgFontSize}
                 x={2}
-                y={idx * rowHeight + rowHeight / 2}
+                y={sampleYPositions[idx]}
               >
                 {sample.label}
               </text>
