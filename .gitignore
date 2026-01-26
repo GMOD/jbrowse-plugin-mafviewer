@@ -123,4 +123,6 @@ cypress/videos
 cypress/screenshots
 
 # Ignore code editor
+
+meta.json
 .vscode
