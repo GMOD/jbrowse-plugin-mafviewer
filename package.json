@@ -21,7 +21,7 @@
     "prebuild": "yarn clean",
     "build": "tsc && NODE_ENV=production node esbuild.mjs",
     "lint": "eslint --report-unused-disable-directives --max-warnings 0",
-    "prepublishOnly": "node -e \"console.log('export const version = \\'' + require('./package.json').version + '\\'')\" > src/version.ts && git add -A src && git commit -m '[skip ci] Bump version.ts'",
+    "prepublishOnly": "node -e \"console.log('export const version = \\'' + require('./package.json').version + '\\'')\" > src/version.ts && git add -A src && git diff --cached --quiet || git commit -m '[skip ci] Bump version.ts'",
     "preversion": "yarn lint && yarn build",
     "postversion": "git push --follow-tags"
   },

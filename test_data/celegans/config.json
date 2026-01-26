@@ -3,10 +3,6 @@
     {
       "name": "MafViewer",
       "url": "http://localhost:9000/dist/out.js"
-    },
-    {
-      "name": "MsaView",
-      "url": "http://localhost:9000/test/jbrowse-plugin-msaview.umd.production.min.js"
     }
   ],
   "assemblies": [
