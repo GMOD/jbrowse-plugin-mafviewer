@@ -103,6 +103,10 @@ export default function stateModelFactory(
          * #property
          */
         showSidebar: defaultShowSidebar,
+        /**
+         * #property
+         */
+        subtreeFilter: types.maybe(types.array(types.string)),
       }),
     )
     .volatile(() => ({
@@ -130,6 +134,12 @@ export default function stateModelFactory(
        * #volatile
        */
       hoveredTreeNode: undefined as { x: number; y: number } | undefined,
+      /**
+       * #volatile
+       */
+      treeMenuAnchor: undefined as
+        | { x: number; y: number; names: string[] }
+        | undefined,
     }))
     .actions(self => ({
       /**
@@ -210,6 +220,18 @@ export default function stateModelFactory(
       /**
        * #action
        */
+      setSubtreeFilter(names?: string[]) {
+        self.subtreeFilter = names
+      },
+      /**
+       * #action
+       */
+      setTreeMenuAnchor(anchor?: { x: number; y: number; names: string[] }) {
+        self.treeMenuAnchor = anchor
+      },
+      /**
+       * #action
+       */
       showInsertionSequenceDialog(insertionData: {
         sequence: string
         sampleLabel: string
@@ -272,11 +294,63 @@ export default function stateModelFactory(
        * #getter
        */
       get root() {
-        return self.volatileTree
-          ? hierarchy(self.volatileTree, d => d.children)
-              .sum(d => (d.children?.length ? 0 : 1))
-              .sort((a, b) => ascending(a.data.length || 1, b.data.length || 1))
-          : undefined
+        if (!self.volatileTree) {
+          return undefined
+        }
+
+        let treeData = self.volatileTree
+
+        // If subtree filter is active, find the subtree node
+        if (self.subtreeFilter && self.subtreeFilter.length > 0) {
+          const filterSet = new Set(self.subtreeFilter)
+
+          // Find the node whose descendants match the filter
+          const findSubtreeRoot = (
+            node: NodeWithIds,
+          ): NodeWithIds | undefined => {
+            const getLeafNames = (n: NodeWithIds): string[] => {
+              if (!n.children || n.children.length === 0) {
+                return n.name ? [n.name] : []
+              }
+              const names: string[] = []
+              for (const child of n.children) {
+                for (const name of getLeafNames(child)) {
+                  names.push(name)
+                }
+              }
+              return names
+            }
+
+            const leafNames = getLeafNames(node)
+            const allMatch =
+              leafNames.length === filterSet.size &&
+              leafNames.every(name => filterSet.has(name))
+
+            if (allMatch) {
+              return node
+            }
+
+            // Search children
+            if (node.children) {
+              for (const child of node.children) {
+                const found = findSubtreeRoot(child)
+                if (found) {
+                  return found
+                }
+              }
+            }
+            return undefined
+          }
+
+          const subtreeRoot = findSubtreeRoot(self.volatileTree)
+          if (subtreeRoot) {
+            treeData = subtreeRoot
+          }
+        }
+
+        return hierarchy(treeData, d => d.children)
+          .sum(d => (d.children?.length ? 0 : 1))
+          .sort((a, b) => ascending(a.data.length || 1, b.data.length || 1))
       },
     }))
     .views(self => ({
@@ -309,18 +383,25 @@ export default function stateModelFactory(
        * #getter
        */
       get samples() {
+        let samples: Sample[] | undefined
         if (this.rowNames) {
           const volatileSamplesMap = self.volatileSamples
             ? Object.fromEntries(self.volatileSamples.map(e => [e.id, e]))
             : undefined
-          return normalize(this.rowNames).map(r => ({
+          samples = normalize(this.rowNames).map(r => ({
             ...r,
             label: volatileSamplesMap?.[r.id]?.label || r.label,
             color: volatileSamplesMap?.[r.id]?.color || r.color,
           }))
         } else {
-          return self.volatileSamples
+          samples = self.volatileSamples
         }
+
+        if (samples && self.subtreeFilter) {
+          const filterSet = new Set(self.subtreeFilter)
+          return samples.filter(s => filterSet.has(s.id))
+        }
+        return samples
       },
 
       /**
@@ -469,6 +550,16 @@ export default function stateModelFactory(
                 self.setShowSidebar(!self.showSidebar)
               },
             },
+            ...(self.subtreeFilter
+              ? [
+                  {
+                    label: 'Clear subtree filter',
+                    onClick: () => {
+                      self.setSubtreeFilter(undefined)
+                    },
+                  },
+                ]
+              : []),
           ]
         },
       }
@@ -586,6 +677,7 @@ export default function stateModelFactory(
         treeAreaWidth,
         showAsUpperCase,
         showSidebar,
+        subtreeFilter,
         ...rest
       } = snap as typeof snap & {
         rowHeight?: number
@@ -596,6 +688,7 @@ export default function stateModelFactory(
         treeAreaWidth?: number
         showAsUpperCase?: boolean
         showSidebar?: boolean
+        subtreeFilter?: string[]
       }
       return {
         ...(rest as Omit<typeof rest, symbol>),
@@ -611,6 +704,7 @@ export default function stateModelFactory(
           ? { showAsUpperCase }
           : {}),
         ...(showSidebar !== defaultShowSidebar ? { showSidebar } : {}),
+        ...(subtreeFilter && subtreeFilter.length > 0 ? { subtreeFilter } : {}),
       }
     })
 }

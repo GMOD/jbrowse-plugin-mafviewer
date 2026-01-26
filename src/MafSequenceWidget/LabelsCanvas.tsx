@@ -70,8 +70,10 @@ export default function LabelsCanvas({
       ref={canvasRef}
       style={{
         display: 'block',
-        position: 'relative',
-        top: -offsetY,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        transform: `translateY(${-offsetY}px)`,
       }}
     />
   )

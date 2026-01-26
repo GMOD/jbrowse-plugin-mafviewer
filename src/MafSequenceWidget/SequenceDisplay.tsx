@@ -233,7 +233,10 @@ const SequenceDisplay = observer(function SequenceDisplay({
   return (
     <div className={classes.container}>
       {showSampleNames && (
-        <div className={classes.labelsWrapper} style={{ width: labelWidth }}>
+        <div
+          className={classes.labelsWrapper}
+          style={{ width: labelWidth, height: containerHeight }}
+        >
           <LabelsCanvas
             samples={samples}
             labelWidth={labelWidth}

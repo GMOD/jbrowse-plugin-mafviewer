@@ -146,15 +146,15 @@ export default function SequenceCanvas({
       const rect = canvas.getBoundingClientRect()
       const x = e.clientX - rect.left
       const y = e.clientY - rect.top
-      const col = Math.floor((x + offsetX) / CHAR_WIDTH) + startCol
-      const row = Math.floor((y + offsetY) / ROW_HEIGHT) + startRow
+      const col = startCol + Math.floor(x / CHAR_WIDTH)
+      const row = startRow + Math.floor(y / ROW_HEIGHT)
 
       const validCol = col >= 0 && col < seqLength ? col : undefined
       const validRow = row >= 0 && row < samples.length ? row : undefined
 
       onHover(validCol, validRow, e.clientX, e.clientY)
     },
-    [seqLength, samples.length, startRow, startCol, offsetX, offsetY, onHover],
+    [seqLength, samples.length, startRow, startCol, onHover],
   )
 
   return (
@@ -162,9 +162,10 @@ export default function SequenceCanvas({
       ref={canvasRef}
       style={{
         display: 'block',
-        position: 'relative',
-        top: -offsetY,
-        left: -offsetX,
+        position: 'sticky',
+        top: 0,
+        left: 0,
+        transform: `translate(${-offsetX}px, ${-offsetY}px)`,
       }}
       onMouseMove={handleMouseMove}
       onMouseLeave={onLeave}

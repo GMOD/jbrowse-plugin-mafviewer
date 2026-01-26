@@ -24,7 +24,7 @@ const LinearMafDisplay = observer(function (props: {
 }) {
   const { model } = props
   const { pluginManager } = getEnv(model)
-  const { height, scrollTop, samples: sources } = model
+  const { height, scrollTop, rowHeight, sidebarWidth, samples: sources } = model
   const ref = useRef<HTMLDivElement>(null)
   const theme = useTheme()
   const session = getSession(model)
@@ -38,6 +38,8 @@ const LinearMafDisplay = observer(function (props: {
     isDragging,
     dragStartX,
     dragEndX,
+    dragStartY,
+    dragEndY,
     showSelectionBox,
     mouseX,
     mouseY,
@@ -56,6 +58,7 @@ const LinearMafDisplay = observer(function (props: {
   return (
     <div
       ref={ref}
+      style={{ position: 'relative' }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -71,6 +74,7 @@ const LinearMafDisplay = observer(function (props: {
       <MsaHighlightOverlay model={model} view={view} height={height} />
       {mouseY !== undefined &&
       mouseX !== undefined &&
+      mouseX > sidebarWidth &&
       sources &&
       !contextCoord ? (
         <div style={{ position: 'relative' }}>
@@ -90,14 +94,16 @@ const LinearMafDisplay = observer(function (props: {
       ) : null}
       {(isDragging || showSelectionBox) &&
       dragStartX !== undefined &&
-      dragEndX !== undefined ? (
+      dragEndX !== undefined &&
+      dragStartY !== undefined &&
+      dragEndY !== undefined ? (
         <div
           style={{
             position: 'absolute',
             left: Math.min(dragStartX, dragEndX),
-            top: 0,
+            top: Math.min(dragStartY, dragEndY) + scrollTop,
             width: Math.abs(dragEndX - dragStartX),
-            height,
+            height: Math.abs(dragEndY - dragStartY),
             backgroundColor: 'rgba(0, 0, 255, 0.2)',
             border: '1px solid rgba(0, 0, 255, 0.5)',
             pointerEvents: 'none',
@@ -131,7 +137,7 @@ const LinearMafDisplay = observer(function (props: {
         }}
         menuItems={[
           {
-            label: 'View subsequence',
+            label: 'View subsequences (all rows)',
             onClick: () => {
               if (!contextCoord) {
                 return
@@ -150,6 +156,48 @@ const LinearMafDisplay = observer(function (props: {
                   {
                     adapterConfig: model.adapterConfig,
                     samples: model.samples,
+                    regions: [
+                      {
+                        refName,
+                        start: view.pxToBp(s).coord - 1,
+                        end: view.pxToBp(e).coord,
+                        assemblyName,
+                      },
+                    ],
+                    connectedViewId: view.id,
+                  },
+                )
+                session.showWidget(widget)
+              }
+              setContextCoord(undefined)
+            },
+          },
+          {
+            label: 'View subsequences (selected rows)',
+            onClick: () => {
+              if (!contextCoord || !sources) {
+                return
+              }
+
+              const { refName, assemblyName } = view.displayedRegions[0]!
+              const [s, e] = [
+                Math.min(contextCoord.dragStartX, contextCoord.dragEndX),
+                Math.max(contextCoord.dragStartX, contextCoord.dragEndX),
+              ]
+
+              const minY = Math.min(contextCoord.dragStartY, contextCoord.dragEndY)
+              const maxY = Math.max(contextCoord.dragStartY, contextCoord.dragEndY)
+              const startRowIdx = Math.floor((minY + scrollTop) / rowHeight)
+              const endRowIdx = Math.ceil((maxY + scrollTop) / rowHeight)
+              const selectedSamples = sources.slice(startRowIdx, endRowIdx)
+
+              if (isSessionModelWithWidgets(session) && selectedSamples.length > 0) {
+                const widget = session.addWidget(
+                  'MafSequenceWidget',
+                  'mafSequence',
+                  {
+                    adapterConfig: model.adapterConfig,
+                    samples: selectedSamples,
                     regions: [
                       {
                         refName,

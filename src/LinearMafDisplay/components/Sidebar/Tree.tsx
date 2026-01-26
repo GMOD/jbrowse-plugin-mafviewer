@@ -29,14 +29,33 @@ const Tree = observer(function ({ model }: { model: LinearMafDisplayModel }) {
   }, [model])
 
   const nodeHandlers = useMemo(() => {
-    const handlers = new Map<HierarchyNode<NodeWithIdsAndLength>, () => void>()
+    const handlers = new Map<
+      HierarchyNode<NodeWithIdsAndLength>,
+      {
+        onMouseEnter: () => void
+        onClick: (event: React.MouseEvent) => void
+      }
+    >()
     if (hierarchy) {
       for (const node of hierarchy.descendants()) {
-        handlers.set(node, () => {
-          model.setHighlightedRowNames(nodeDescendantNames.get(node), {
-            x: node.x!,
-            y: node.y!,
-          })
+        const names = nodeDescendantNames.get(node)
+        handlers.set(node, {
+          onMouseEnter: () => {
+            model.setHighlightedRowNames(names, {
+              x: node.x!,
+              y: node.y!,
+            })
+          },
+          onClick: (event: React.MouseEvent) => {
+            event.preventDefault()
+            if (names && names.length > 0) {
+              model.setTreeMenuAnchor({
+                x: event.clientX,
+                y: event.clientY,
+                names,
+              })
+            }
+          },
         })
       }
     }
@@ -55,6 +74,9 @@ const Tree = observer(function ({ model }: { model: LinearMafDisplayModel }) {
             // @ts-expect-error
             const sx = showBranchLen ? source.len : source.y
 
+            const sourceHandlers = nodeHandlers.get(source)
+            const targetHandlers = nodeHandlers.get(target)
+
             return (
               <React.Fragment key={`${treeAreaWidth}-${sy}-${ty}-${tx}-${sx}`}>
                 {/* Visible lines */}
@@ -67,8 +89,9 @@ const Tree = observer(function ({ model }: { model: LinearMafDisplayModel }) {
                   x2={sx}
                   y2={ty}
                   style={hitboxStyle}
-                  onMouseEnter={nodeHandlers.get(source)}
+                  onMouseEnter={sourceHandlers?.onMouseEnter}
                   onMouseLeave={clearHighlight}
+                  onClick={sourceHandlers?.onClick}
                 />
                 <line
                   x1={sx}
@@ -76,8 +99,9 @@ const Tree = observer(function ({ model }: { model: LinearMafDisplayModel }) {
                   x2={tx}
                   y2={ty}
                   style={hitboxStyle}
-                  onMouseEnter={nodeHandlers.get(target)}
+                  onMouseEnter={targetHandlers?.onMouseEnter}
                   onMouseLeave={clearHighlight}
+                  onClick={targetHandlers?.onClick}
                 />
               </React.Fragment>
             )
