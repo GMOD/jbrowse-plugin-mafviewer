@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { observer } from 'mobx-react'
 import { makeStyles } from 'tss-react/mui'
@@ -89,12 +83,6 @@ const SequenceDisplay = observer(function SequenceDisplay({
   const [tooltipPos, setTooltipPos] = useState<
     { x: number; y: number } | undefined
   >()
-
-  const maxLabelLength = useMemo(
-    () =>
-      samples ? Math.max(...samples.map(s => (s.label ?? s.id).length)) : 0,
-    [samples],
-  )
 
   const seqLength = sequences[0]?.length || 0
   const totalSeqWidth = seqLength * CHAR_WIDTH
@@ -248,16 +236,13 @@ const SequenceDisplay = observer(function SequenceDisplay({
         <div className={classes.labelsWrapper} style={{ width: labelWidth }}>
           <LabelsCanvas
             samples={samples}
-            maxLabelLength={maxLabelLength}
+            labelWidth={labelWidth}
             scrollTop={scrollTop}
             containerHeight={containerHeight}
           />
           <div
             className={classes.resizeHandle}
             onMouseDown={handleResizeMouseDown}
-            style={{
-              backgroundColor: isResizing ? undefined : undefined,
-            }}
           />
         </div>
       )}

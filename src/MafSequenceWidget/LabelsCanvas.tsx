@@ -2,13 +2,13 @@ import React, { useEffect, useRef } from 'react'
 
 import { useTheme } from '@mui/material'
 
-import { CHAR_WIDTH, FONT, LABEL_PADDING, ROW_HEIGHT } from './constants'
+import { FONT, ROW_HEIGHT } from './constants'
 
 import type { Sample } from '../LinearMafDisplay/types'
 
 interface LabelsCanvasProps {
   samples: Sample[]
-  maxLabelLength: number
+  labelWidth: number
   scrollTop: number
   containerHeight: number
 }
@@ -17,14 +17,12 @@ const OVERSCAN = 5
 
 export default function LabelsCanvas({
   samples,
-  maxLabelLength,
+  labelWidth,
   scrollTop,
   containerHeight,
 }: LabelsCanvasProps) {
   const theme = useTheme()
   const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  const labelWidth = maxLabelLength * CHAR_WIDTH + LABEL_PADDING
 
   const startRow = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN)
   const visibleRows = Math.ceil(containerHeight / ROW_HEIGHT) + OVERSCAN * 2
@@ -36,7 +34,7 @@ export default function LabelsCanvas({
 
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas || canvasHeight <= 0) {
+    if (!canvas || canvasHeight <= 0 || labelWidth <= 0) {
       return
     }
 

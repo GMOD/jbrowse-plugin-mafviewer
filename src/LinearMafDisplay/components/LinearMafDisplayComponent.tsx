@@ -134,12 +134,8 @@ const LinearMafDisplay = observer(function (props: {
             label: 'View subsequence',
             onClick: () => {
               if (!contextCoord) {
-                console.log('[ViewSubsequence] No contextCoord, returning early')
                 return
               }
-
-              console.log('[ViewSubsequence] contextCoord:', contextCoord)
-              console.log('[ViewSubsequence] view.displayedRegions:', view.displayedRegions)
 
               const { refName, assemblyName } = view.displayedRegions[0]!
               const [s, e] = [
@@ -147,34 +143,25 @@ const LinearMafDisplay = observer(function (props: {
                 Math.max(contextCoord.dragStartX, contextCoord.dragEndX),
               ]
 
-              console.log('[ViewSubsequence] Pixel selection s:', s, 'e:', e)
-              console.log('[ViewSubsequence] pxToBp(s):', view.pxToBp(s))
-              console.log('[ViewSubsequence] pxToBp(e):', view.pxToBp(e))
-              console.log('[ViewSubsequence] model.adapterConfig:', model.adapterConfig)
-              console.log('[ViewSubsequence] model.samples:', model.samples)
-
               if (isSessionModelWithWidgets(session)) {
-                const region = {
-                  refName,
-                  start: view.pxToBp(s).coord - 1,
-                  end: view.pxToBp(e).coord,
-                  assemblyName,
-                }
-                console.log('[ViewSubsequence] Final region:', region)
-
                 const widget = session.addWidget(
                   'MafSequenceWidget',
                   'mafSequence',
                   {
                     adapterConfig: model.adapterConfig,
                     samples: model.samples,
-                    regions: [region],
+                    regions: [
+                      {
+                        refName,
+                        start: view.pxToBp(s).coord - 1,
+                        end: view.pxToBp(e).coord,
+                        assemblyName,
+                      },
+                    ],
                     connectedViewId: view.id,
                   },
                 )
                 session.showWidget(widget)
-              } else {
-                console.log('[ViewSubsequence] session is not a SessionModelWithWidgets')
               }
               setContextCoord(undefined)
             },
