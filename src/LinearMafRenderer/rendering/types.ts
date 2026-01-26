@@ -11,7 +11,7 @@ export const HIGH_ZOOM_THRESHOLD = 0.2
 export const MIN_ROW_HEIGHT_FOR_BORDERS = 5
 export const HIGH_BP_PER_PX_THRESHOLD = 10
 export const INSERTION_BORDER_HEIGHT = 5
-export const MIN_X_DISTANCE = 0.5
+export const MIN_X_DISTANCE = 1
 
 export type { Sample } from '../../LinearMafDisplay/types'
 
@@ -56,8 +56,8 @@ export interface RenderingContext {
   spatialIndex: RenderedBase[]
   spatialIndexCoords: number[]
 
-  // Track last X position for spatial index optimization
-  lastInsertedX: number
+  // Track last X position per row for spatial index optimization
+  lastInsertedXPerRow: Map<number, number>
 }
 
 export interface AlignmentRecord {

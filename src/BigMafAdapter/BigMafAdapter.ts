@@ -6,6 +6,12 @@ import { getSnapshot } from '@jbrowse/mobx-state-tree'
 import { firstValueFrom, toArray } from 'rxjs'
 
 import parseNewick from '../parseNewick'
+import {
+  forEachBaseString,
+  forEachInsertionString,
+  MafBaseCallback,
+  MafInsertionCallback,
+} from '../shared/mafIterators'
 import { normalize } from '../util'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
 
@@ -122,6 +128,22 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
             }
           }
 
+          // Create iterator functions that close over the sequence data
+          // This allows the renderer to iterate without knowing the storage format
+          const refSeq = referenceSeq!
+          const forEachBase = (sampleId: string, callback: MafBaseCallback) => {
+            const alignment = alignments[sampleId]
+            if (alignment) {
+              forEachBaseString(alignment.seq, refSeq, callback)
+            }
+          }
+          const forEachInsertion = (sampleId: string, callback: MafInsertionCallback) => {
+            const alignment = alignments[sampleId]
+            if (alignment) {
+              forEachInsertionString(alignment.seq, refSeq, callback)
+            }
+          }
+
           observer.next(
             new SimpleFeature({
               id: feature.id(),
@@ -131,6 +153,9 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
                 refName: feature.get('refName'),
                 seq: referenceSeq,
                 alignments,
+                // Iterator methods - renderer can use these instead of raw data
+                forEachBase,
+                forEachInsertion,
               },
             }),
           )

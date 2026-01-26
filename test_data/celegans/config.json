@@ -94,12 +94,54 @@
   "tracks": [
     {
       "type": "MafTrack",
+      "trackId": "chrI-bigMaf",
+      "name": "7-way (BigMaf)",
+      "adapter": {
+        "type": "BigMafAdapter",
+        "bigBedLocation": {
+          "uri": "chrI.bigMaf.bb"
+        },
+        "nhLocation": {
+          "uri": "ce10.7way.nh"
+        }
+      },
+      "assemblyNames": ["ce10"]
+    },
+    {
+      "type": "MafTrack",
+      "trackId": "chrI-taf",
+      "name": "7-way (TAF)",
+      "adapter": {
+        "type": "BgzipTaffyAdapter",
+        "tafGzLocation": {
+          "uri": "chrI.taf.gz"
+        },
+        "taiLocation": {
+          "uri": "chrI.taf.gz.tai"
+        },
+        "nhLocation": {
+          "uri": "ce10.7way.nh"
+        }
+      },
+      "assemblyNames": ["ce10"]
+    },
+    {
+      "type": "MafTrack",
       "trackId": "chrI.bed",
-      "name": "chrI.bed",
+      "name": "7-way (MafTabix)",
       "adapter": {
         "type": "MafTabixAdapter",
-        "samples": ["ce10", "cb4", "caeSp111", "caeRem4", "caeJap4", "caePb3"],
-        "uri": "chrI.bed.gz"
+        "nhLocation": {
+          "uri": "ce10.7way.nh"
+        },
+        "bedGzLocation": {
+          "uri": "chrI.bed.gz"
+        },
+        "index": {
+          "location": {
+            "uri": "chrI.bed.gz.tbi"
+          }
+        }
       },
       "assemblyNames": ["ce10"]
     },

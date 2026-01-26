@@ -74,7 +74,7 @@ export function makeImageData({
     charHeight,
     spatialIndex: [],
     spatialIndexCoords: [],
-    lastInsertedX: -Infinity, // Start with -Infinity so first item is always inserted
+    lastInsertedXPerRow: new Map(), // Track per-row to ensure each row has spatial index entries
   }
 
   for (const feature of features.values()) {

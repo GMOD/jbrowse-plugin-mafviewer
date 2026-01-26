@@ -135,13 +135,14 @@ export function renderInsertions(
       // Insertions always bypass distance filter
       const isLargeInsertion =
         insertionSequence.length > LARGE_INSERTION_THRESHOLD
-      if (shouldAddToSpatialIndex(actualXPos, context, true)) {
+      if (shouldAddToSpatialIndex(actualXPos, rowIndex, context, true)) {
         addToSpatialIndex(
           context,
           actualXPos,
           rowTop,
           actualXPos + actualWidth,
           rowTop + context.h,
+          rowIndex,
           {
             pos: genomicOffset + alignmentStart,
             chr,

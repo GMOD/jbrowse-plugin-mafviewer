@@ -59,13 +59,14 @@ export function renderMismatches(
           )
 
           // Add to spatial index if distance filter allows
-          if (shouldAddToSpatialIndex(xPos, context)) {
+          if (shouldAddToSpatialIndex(xPos, rowIndex, context)) {
             addToSpatialIndex(
               context,
               xPos,
               rowTop,
               xPos + context.scale + GAP_STROKE_OFFSET,
               rowTop + context.h,
+              rowIndex,
               {
                 pos: genomicOffset + alignmentStart,
                 chr,
@@ -89,13 +90,14 @@ export function renderMismatches(
           )
 
           // Add to spatial index if distance filter allows
-          if (shouldAddToSpatialIndex(xPos, context)) {
+          if (shouldAddToSpatialIndex(xPos, rowIndex, context)) {
             addToSpatialIndex(
               context,
               xPos,
               rowTop,
               xPos + context.scale + GAP_STROKE_OFFSET,
               rowTop + context.h,
+              rowIndex,
               {
                 pos: genomicOffset + alignmentStart,
                 chr,
