@@ -146,7 +146,6 @@ const SequenceDisplay = observer(function SequenceDisplay({
   const handleResizeMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault()
-      setIsResizing(true)
       const startX = e.clientX
       const startWidth = labelWidth
 
@@ -160,7 +159,6 @@ const SequenceDisplay = observer(function SequenceDisplay({
       }
 
       const handleMouseUp = () => {
-        setIsResizing(false)
         document.removeEventListener('mousemove', handleMouseMove)
         document.removeEventListener('mouseup', handleMouseUp)
       }

@@ -1,12 +1,19 @@
+import {
+  CODE_GAP,
+  CODE_SPACE,
+  getBaseCode,
+  getLowerCode,
+} from '../../util/sequenceEncoding'
 import { fillRect } from '../util'
 import { GAP_STROKE_OFFSET } from './types'
 
+import type { EncodedSequence } from '../../util/sequenceEncoding'
 import type { RenderingContext } from './types'
 
 export function renderMatches(
   context: RenderingContext,
-  alignment: string,
-  seq: string,
+  alignment: EncodedSequence,
+  seq: EncodedSequence,
   leftPx: number,
   rowTop: number,
 ) {
@@ -23,10 +30,10 @@ export function renderMatches(
     i < seqLength;
     i++
   ) {
-    if (seq[i] !== '-') {
-      // Only process non-gap positions in reference
-      const currentChar = alignment[i]
-      if (seq[i] === currentChar && currentChar !== ' ') {
+    const refCode = getBaseCode(seq, i)
+    if (refCode !== CODE_GAP) {
+      const alignCode = getBaseCode(alignment, i)
+      if (getLowerCode(refCode) === getLowerCode(alignCode) && alignCode !== CODE_SPACE) {
         const xPos = leftPx + scale * genomicOffset
         fillRect(ctx, xPos, rowTop, scale + GAP_STROKE_OFFSET, h, canvasWidth)
       }

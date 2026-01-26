@@ -60,8 +60,12 @@ export interface RenderingContext {
   lastInsertedXPerRow: Map<number, number>
 }
 
+import type { EncodedSequence } from '../../util/sequenceEncoding'
+
+export type { EncodedSequence } from '../../util/sequenceEncoding'
+
 export interface AlignmentRecord {
-  seq: string
+  seq: EncodedSequence
   start: number
   strand: number
   chr: string

@@ -11,7 +11,7 @@ import {
   measureText,
 } from '@jbrowse/core/util'
 import { getRpcSessionId } from '@jbrowse/core/util/tracks'
-import { addDisposer, isAlive, types } from '@jbrowse/mobx-state-tree'
+import { addDisposer, cast, isAlive, types } from '@jbrowse/mobx-state-tree'
 import { ascending } from 'd3-array'
 import { cluster, hierarchy } from 'd3-hierarchy'
 import deepEqual from 'fast-deep-equal'
@@ -221,7 +221,7 @@ export default function stateModelFactory(
        * #action
        */
       setSubtreeFilter(names?: string[]) {
-        self.subtreeFilter = names
+        self.subtreeFilter = cast(names)
       },
       /**
        * #action

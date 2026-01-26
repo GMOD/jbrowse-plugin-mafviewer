@@ -6,17 +6,13 @@ import { getSnapshot } from '@jbrowse/mobx-state-tree'
 import { firstValueFrom, toArray } from 'rxjs'
 
 import parseNewick from '../parseNewick'
-import {
-  forEachBaseString,
-  forEachInsertionString,
-  MafBaseCallback,
-  MafInsertionCallback,
-} from '../shared/mafIterators'
 import { normalize } from '../util'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
+import { encodeSequence } from '../util/sequenceEncoding'
 
 import type { BaseOptions } from '@jbrowse/core/data_adapters/BaseAdapter'
 import type { Feature, Region } from '@jbrowse/core/util'
+import type { EncodedSequence } from '../util/sequenceEncoding'
 
 interface OrganismRecord {
   chr: string
@@ -24,7 +20,7 @@ interface OrganismRecord {
   srcSize: number
   strand: number
   unknown: number
-  seq: string
+  seq: EncodedSequence
 }
 export default class BigMafAdapter extends BaseFeatureDataAdapter {
   public setupP?: Promise<{ adapter: BaseFeatureDataAdapter }>
@@ -87,60 +83,35 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
             }
           }
 
-          // Pre-size arrays based on actual sequence block count
-          const alns = new Array<string>(sequenceBlockCount)
           const alignments = {} as Record<string, OrganismRecord>
+          let referenceSeq: EncodedSequence | undefined
 
-          let sequenceIndex = 0
-          let referenceSeq: string | undefined
-
-          // Single-pass processing: combine both loops
+          // Single-pass processing
           for (const block of blocks) {
             if (block.startsWith('s')) {
-              // Split once and cache the result
               const parts = block.split(WHITESPACE_REGEX)
               const sequence = parts[6]!
               const organismChr = parts[1]!
 
-              // Store sequence in pre-sized array
-              alns[sequenceIndex] = sequence
+              // Encode immediately - original string can be GC'd
+              const encodedSeq = encodeSequence(sequence)
 
               // Set reference sequence from first block
               if (referenceSeq === undefined) {
-                referenceSeq = sequence
+                referenceSeq = encodedSeq
               }
 
-              // Parse organism and chromosome
               const { assemblyName: org, chr } =
                 parseAssemblyAndChrSimple(organismChr)
 
-              // Create alignment record directly
               alignments[org] = {
                 chr,
                 start: +parts[2]!,
                 srcSize: +parts[3]!,
                 strand: parts[4] === '+' ? 1 : -1,
                 unknown: +parts[5]!,
-                seq: sequence,
+                seq: encodedSeq,
               }
-
-              sequenceIndex++
-            }
-          }
-
-          // Create iterator functions that close over the sequence data
-          // This allows the renderer to iterate without knowing the storage format
-          const refSeq = referenceSeq!
-          const forEachBase = (sampleId: string, callback: MafBaseCallback) => {
-            const alignment = alignments[sampleId]
-            if (alignment) {
-              forEachBaseString(alignment.seq, refSeq, callback)
-            }
-          }
-          const forEachInsertion = (sampleId: string, callback: MafInsertionCallback) => {
-            const alignment = alignments[sampleId]
-            if (alignment) {
-              forEachInsertionString(alignment.seq, refSeq, callback)
             }
           }
 
@@ -153,9 +124,6 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
                 refName: feature.get('refName'),
                 seq: referenceSeq,
                 alignments,
-                // Iterator methods - renderer can use these instead of raw data
-                forEachBase,
-                forEachInsertion,
               },
             }),
           )

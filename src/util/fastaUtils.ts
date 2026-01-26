@@ -1,5 +1,13 @@
 import { Sample } from '../LinearMafDisplay/types'
+import {
+  CODE_GAP,
+  CODE_SPACE,
+  decodeBaseLower,
+  getBaseCode,
+  getLowerCode,
+} from './sequenceEncoding'
 
+import type { EncodedSequence } from './sequenceEncoding'
 import type { AlignmentRecord } from '../LinearMafRenderer/rendering'
 import type { Feature, Region } from '@jbrowse/core/util'
 
@@ -43,7 +51,7 @@ export function processFeaturesToFasta({
   for (const feature of features.values()) {
     const leftCoord = feature.get('start')
     const vals = feature.get('alignments') as Record<string, AlignmentRecord>
-    const seq = feature.get('seq')
+    const seq = feature.get('seq') as EncodedSequence
 
     for (const [sample, val] of Object.entries(vals)) {
       const alignment = val.seq
@@ -54,44 +62,41 @@ export function processFeaturesToFasta({
 
       const rowArray = outputRowsArrays[row]!
 
-      // Single-pass processing: handle gaps, matches, mismatches, and collect insertions
       for (let i = 0, o = 0, l = alignment.length; i < l; i++) {
-        if (seq[i] !== '-') {
-          const c = alignment[i]
+        const seqCode = getBaseCode(seq, i)
+        if (seqCode !== CODE_GAP) {
+          const alignCode = getBaseCode(alignment, i)
           const pos = leftCoord + o - region.start
 
           if (pos >= 0 && pos < rlen) {
-            if (c === '-') {
-              // Gap
+            if (alignCode === CODE_GAP) {
               rowArray[pos] = '-'
-            } else if (c !== ' ') {
+            } else if (alignCode !== CODE_SPACE) {
+              const c = decodeBaseLower(alignment, i)
               if (showAllLetters) {
-                // Show all letters mode: write character directly
                 rowArray[pos] = c
-              } else if (seq[i] === c) {
-                // Match: use dot notation
+              } else if (getLowerCode(seqCode) === getLowerCode(alignCode)) {
                 rowArray[pos] = '.'
               } else {
-                // Mismatch: write character
                 rowArray[pos] = c
               }
             }
           }
           o++
         } else if (includeInsertions) {
-          // This is an insertion (reference has gap)
-          // Collect all consecutive insertion characters
           let insertionSequence = ''
-          while (i < alignment.length && seq[i] === '-') {
-            const c = alignment[i]
-            insertionSequence += c !== '-' && c !== ' ' ? c : '-'
+          while (i < alignment.length && getBaseCode(seq, i) === CODE_GAP) {
+            const alignCode = getBaseCode(alignment, i)
+            if (alignCode !== CODE_GAP && alignCode !== CODE_SPACE) {
+              insertionSequence += decodeBaseLower(alignment, i)
+            } else {
+              insertionSequence += '-'
+            }
             i++
           }
-          i-- // Back up one since the outer loop will increment
+          i--
 
           if (insertionSequence.length > 0) {
-            // Position is relative to region start, insertions come after position o-1
-            // (or before position 0 if o is 0)
             const insertPos = leftCoord + o - region.start
             if (insertPos >= 0 && insertPos <= rlen) {
               const existing = insertionsAtPosition.get(insertPos) || []

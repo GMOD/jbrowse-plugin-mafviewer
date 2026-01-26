@@ -19,6 +19,9 @@ import {
   parseAssemblyAndChr,
   selectReferenceSequence,
 } from '../util/parseAssemblyName'
+import { encodeSequence } from '../util/sequenceEncoding'
+
+import type { EncodedSequence } from '../util/sequenceEncoding'
 
 interface OrganismRecord {
   chr: string
@@ -26,7 +29,7 @@ interface OrganismRecord {
   srcSize: number
   strand: number
   unknown: number
-  seq: string
+  seq: EncodedSequence
 }
 
 export default class MafTabixAdapter extends BaseFeatureDataAdapter {
@@ -114,19 +117,17 @@ export default class MafTabixAdapter extends BaseFeatureDataAdapter {
             const { assemblyName, chr } = parseAssemblyAndChr(assemblyAndChr)
 
             if (assemblyName) {
-              // Set first assembly name found (only once)
               if (!firstAssemblyNameFound) {
                 firstAssemblyNameFound = assemblyName
               }
 
-              // Create alignment record with optimized number conversion
               alignments[assemblyName] = {
                 chr,
                 start: +startStr!,
                 srcSize: +srcSizeStr!,
                 strand: strandStr === '-' ? -1 : 1,
                 unknown: +unknownStr!,
-                seq,
+                seq: encodeSequence(seq),
               }
             }
           }

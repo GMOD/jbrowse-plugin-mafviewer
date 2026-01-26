@@ -1,5 +1,11 @@
 import { measureText } from '@jbrowse/core/util'
 
+import {
+  CODE_GAP,
+  CODE_SPACE,
+  decodeBaseLower,
+  getBaseCode,
+} from '../../util/sequenceEncoding'
 import { fillRect } from '../util'
 import { addToSpatialIndex, shouldAddToSpatialIndex } from './spatialIndex'
 import {
@@ -14,12 +20,13 @@ import {
   MIN_ROW_HEIGHT_FOR_BORDERS,
 } from './types'
 
+import type { EncodedSequence } from '../../util/sequenceEncoding'
 import type { RenderingContext } from './types'
 
 export function renderInsertions(
   context: RenderingContext,
-  alignment: string,
-  seq: string,
+  alignment: EncodedSequence,
+  seq: EncodedSequence,
   leftPx: number,
   rowTop: number,
   bpPerPx: number,
@@ -35,9 +42,10 @@ export function renderInsertions(
     i++
   ) {
     let insertionSequence = ''
-    while (seq[i] === '-') {
-      if (alignment[i] !== '-' && alignment[i] !== ' ') {
-        insertionSequence += alignment[i]
+    while (getBaseCode(seq, i) === CODE_GAP) {
+      const alignCode = getBaseCode(alignment, i)
+      if (alignCode !== CODE_GAP && alignCode !== CODE_SPACE) {
+        insertionSequence += decodeBaseLower(alignment, i)
       }
       i++
     }

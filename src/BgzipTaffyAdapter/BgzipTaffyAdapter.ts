@@ -17,27 +17,34 @@ import AbortablePromiseCache from 'abortable-promise-cache'
 import VirtualOffset from './virtualOffset'
 import parseNewick from '../parseNewick'
 import { normalize } from '../util'
-import { RowInstruction, parseRowInstructions } from './rowInstructions'
-import { countNonGapBases, parseLineByLine } from './util'
+import { parseRowInstructions, filterFirstLineInstructions } from './rowInstructions'
+import { countNonGapBases } from './util'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
+import { encodeSequence } from '../util/sequenceEncoding'
 
+import type { RowInstruction } from './rowInstructions'
 import type { IndexData, OrganismRecord } from './types'
 
-// Represents a row in the alignment
+// Represents a row in the alignment (like Alignment_Row in C)
 interface RowState {
   sequenceName: string
   start: number
   strand: number
   sequenceLength: number
-  seq: string
+  bases: string // accumulated bases for this row in current block
+  length: number // non-gap length
+}
+
+// Represents an alignment block (like Alignment in C)
+interface AlignmentBlock {
+  rows: RowState[]
+  columnNumber: number
 }
 
 interface SetupData {
   index: IndexData
   runLengthEncodeBases: boolean
 }
-
-const toP = (s = 0) => +s.toFixed(1)
 
 // Binary search to find the index of the first element >= target
 function lowerBound<T>(arr: T[], target: number, getKey: (item: T) => number) {
@@ -67,14 +74,29 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       statusCallback,
     ) => {
       const file = openLocation(this.getConf('tafGzLocation'))
-      const response = await file.read(
-        nextEntry.virtualOffset.blockPosition -
-          firstEntry.virtualOffset.blockPosition,
-        firstEntry.virtualOffset.blockPosition,
-      )
+
+      const startBlock = firstEntry.virtualOffset.blockPosition
+      const endBlock = nextEntry.virtualOffset.blockPosition
+
+      // Read enough data to cover the range
+      const MIN_BLOCK_SIZE = 65536
+      const readLength =
+        endBlock > startBlock
+          ? endBlock - startBlock + MIN_BLOCK_SIZE
+          : MIN_BLOCK_SIZE
+
+      const response = await file.read(readLength, startBlock)
       const buffer = await unzip(response)
-      const slice = buffer.slice(firstEntry.virtualOffset.dataPosition)
-      return this.getChunk(slice, runLengthEncodeBases, {
+
+      const startOffset = firstEntry.virtualOffset.dataPosition
+      const endOffset = endBlock === startBlock
+        ? nextEntry.virtualOffset.dataPosition
+        : buffer.length
+
+      const slice = buffer.slice(startOffset, endOffset)
+
+      // Parse TAF data into multiple alignment blocks (like taf_read_block)
+      return await this.parseTafBlocks(slice, runLengthEncodeBases, {
         statusCallback: statusCallback as (arg: string) => void,
         signal,
       })
@@ -86,161 +108,78 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     return Object.keys(index)
   }
 
-  async getChunk(
-    buffer: Uint8Array,
-    runLengthEncodeBases: boolean,
-    opts?: BaseOptions,
-  ) {
-    const { statusCallback = () => {} } = opts || {}
+  // Faithful translation of parse_coordinates_and_establish_block from taf.c
+  // Creates a new block by copying from previous block and applying coordinate changes
+  parseCoordinatesAndEstablishBlock(
+    pBlock: AlignmentBlock | undefined,
+    instructions: RowInstruction[],
+  ): AlignmentBlock {
+    const block: AlignmentBlock = {
+      rows: [],
+      columnNumber: 0,
+    }
 
-    // Track rows by their position in the alignment
-    const rows: RowState[] = []
-
-    let j = 0
-    let b = 0
-    parseLineByLine(buffer, line => {
-      if (j++ % 100 === 0) {
-        statusCallback(
-          `Processing ${toP(b / 1_000_000)}/${toP(buffer.length / 1_000_000)}Mb`,
-        )
-      }
-      b += line.length
-      if (line && !line.startsWith('#')) {
-        // Split on ' ; ' to separate bases from coordinates
-        const semicolonIndex = line.indexOf(' ; ')
-        let basesAndTags: string
-        let rowInstructions: string | undefined
-
-        if (semicolonIndex !== -1) {
-          basesAndTags = line.slice(0, semicolonIndex)
-          rowInstructions = line.slice(semicolonIndex + 3)
-        } else {
-          basesAndTags = line
-          rowInstructions = undefined
-        }
-
-        // Process coordinate instructions if present
-        if (rowInstructions) {
-          // Remove any tag section (after @)
-          const atIndex = rowInstructions.indexOf(' @')
-          const coordPart =
-            atIndex !== -1 ? rowInstructions.slice(0, atIndex) : rowInstructions
-          const instructions = parseRowInstructions(coordPart)
-
-          for (const ins of instructions) {
-            this.applyInstruction(rows, ins)
-          }
-        }
-
-        // Remove any tags from the bases portion
-        const atIndex = basesAndTags.indexOf(' @')
-        const basesOnly =
-          atIndex !== -1 ? basesAndTags.slice(0, atIndex) : basesAndTags
-
-        // Parse bases for this column
-        // In TAF, each line is a column with one base per row
-        const basesStr = basesOnly.trim()
-        const bases = this.parseBases(
-          basesStr,
-          rows.length,
-          runLengthEncodeBases,
-        )
-
-        // Append each base to the corresponding row
-        for (let i = 0; i < bases.length; i++) {
-          const row = rows[i]
-          if (row) {
-            row.seq += bases[i]
-          }
-        }
-      }
-    })
-
-    if (rows.length > 0) {
-      // Build alignments object keyed by assembly name
-      const alignments = {} as Record<string, OrganismRecord>
-
-      for (const row of rows) {
-        const { assemblyName, chr } = parseAssemblyAndChrSimple(
-          row.sequenceName,
-        )
-
-        // Use the full sequence name as key to handle multiple chromosomes
-        // from the same assembly
-        alignments[assemblyName] = {
-          chr,
-          start: row.start,
-          srcSize: row.sequenceLength,
-          strand: row.strand,
-          seq: row.seq,
-        }
-      }
-
-      const row0 = rows[0]!
-      const nonGapLength = countNonGapBases(row0.seq)
-
-      return {
-        uniqueId: `${row0.start}-${nonGapLength}`,
-        start: row0.start,
-        end: row0.start + nonGapLength,
-        strand: row0.strand,
-        alignments,
-        seq: row0.seq,
+    // Copy rows from previous block (like the C code does)
+    if (pBlock) {
+      for (const pRow of pBlock.rows) {
+        block.rows.push({
+          sequenceName: pRow.sequenceName,
+          start: pRow.start + pRow.length, // Start continues from previous end
+          strand: pRow.strand,
+          sequenceLength: pRow.sequenceLength,
+          bases: '',
+          length: 0,
+        })
       }
     }
-    return undefined
+
+    // Apply coordinate instructions (like the C code)
+    for (const ins of instructions) {
+      if (ins.type === 'i') {
+        // Insert new row at specified position
+        block.rows.splice(ins.row, 0, {
+          sequenceName: ins.sequenceName,
+          start: ins.start,
+          strand: ins.strand,
+          sequenceLength: ins.sequenceLength,
+          bases: '',
+          length: 0,
+        })
+      } else if (ins.type === 's') {
+        // Substitute coordinates for existing row
+        const row = block.rows[ins.row]
+        if (row) {
+          row.sequenceName = ins.sequenceName
+          row.start = ins.start
+          row.strand = ins.strand
+          row.sequenceLength = ins.sequenceLength
+        }
+      } else if (ins.type === 'd') {
+        // Delete row at specified position
+        if (block.rows[ins.row]) {
+          block.rows.splice(ins.row, 1)
+        }
+      } else if (ins.type === 'g') {
+        // Gap: increment start coordinate
+        const row = block.rows[ins.row]
+        if (row) {
+          row.start += ins.gapLength
+        }
+      } else if (ins.type === 'G') {
+        // Gap with substring: increment start by substring length
+        const row = block.rows[ins.row]
+        if (row) {
+          row.start += ins.gapSubstring.length
+        }
+      }
+    }
+
+    return block
   }
 
-  // Apply a coordinate instruction to the rows array
-  applyInstruction(rows: RowState[], ins: RowInstruction) {
-    if (ins.type === 'i') {
-      // Insert a new row at the specified position
-      rows.splice(ins.row, 0, {
-        sequenceName: ins.sequenceName,
-        start: ins.start,
-        strand: ins.strand,
-        sequenceLength: ins.sequenceLength,
-        seq: '',
-      })
-    } else if (ins.type === 's') {
-      // Substitute/update coordinates for an existing row
-      const row = rows[ins.row]
-      if (row) {
-        row.sequenceName = ins.sequenceName
-        row.start = ins.start
-        row.strand = ins.strand
-        row.sequenceLength = ins.sequenceLength
-      }
-    } else if (ins.type === 'd') {
-      // Delete a row at the specified position
-      rows.splice(ins.row, 1)
-    } else if (ins.type === 'g') {
-      // Gap operation: increment the start coordinate by gap length
-      // This handles unaligned regions between blocks
-      const row = rows[ins.row]
-      if (row) {
-        row.start += ins.gapLength
-      }
-    }
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    else if (ins.type === 'G') {
-      // Gap operation with explicit substring: increment start by substring length
-      const row = rows[ins.row]
-      if (row) {
-        row.start += ins.gapSubstring.length
-      }
-    }
-  }
-
-  // Parse bases from a column line
-  // Handles both run-length encoded and plain format
-  parseBases(
-    basesStr: string,
-    expectedLength: number,
-    runLengthEncodeBases: boolean,
-  ) {
+  // Parse bases from a column (like get_bases in taf.c)
+  parseBases(basesStr: string, expectedLength: number, runLengthEncodeBases: boolean): string {
     if (runLengthEncodeBases) {
-      // Run-length encoded: "A 3 T 2" means "AAATT"
       const tokens = basesStr.split(' ')
       let result = ''
       for (let i = 0; i < tokens.length; i += 2) {
@@ -252,8 +191,167 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       }
       return result
     }
-    // Plain format: just return the string (one char per row)
     return basesStr
+  }
+
+  // Faithful translation of taf_read_block from taf.c
+  // Parses TAF data into multiple alignment blocks
+  async parseTafBlocks(
+    buffer: Uint8Array,
+    runLengthEncodeBases: boolean,
+    opts?: BaseOptions,
+  ) {
+    const { statusCallback = () => {} } = opts || {}
+    const features: Array<{
+      uniqueId: string
+      start: number
+      end: number
+      strand: number
+      alignments: Record<string, OrganismRecord>
+      seq: ReturnType<typeof encodeSequence>
+    }> = []
+
+    let pBlock: AlignmentBlock | undefined
+    let currentBlock: AlignmentBlock | undefined
+    let columns: string[] = []
+    let isFirstCoordLine = true
+    let lineNum = 0
+
+    const decoder = new TextDecoder('ascii')
+    const text = decoder.decode(buffer)
+    const lines = text.split('\n')
+
+    for (const line of lines) {
+      lineNum++
+      if (lineNum % 1000 === 0) {
+        statusCallback(`Processing line ${lineNum}`)
+      }
+
+      const trimmedLine = line.trim()
+      if (!trimmedLine || trimmedLine.startsWith('#')) {
+        continue
+      }
+
+      // Check if line has coordinates (contains ' ; ')
+      const semicolonIndex = trimmedLine.indexOf(' ; ')
+      const hasCoordinates = semicolonIndex !== -1
+
+      if (hasCoordinates) {
+        // If we have a current block with columns, finalize it
+        if (currentBlock && columns.length > 0) {
+          this.finalizeBlock(currentBlock, columns)
+          const feature = this.blockToFeature(currentBlock)
+          if (feature) {
+            features.push(feature)
+          }
+          pBlock = currentBlock
+        }
+
+        // Parse the coordinate instructions
+        const basesAndTags = trimmedLine.slice(0, semicolonIndex)
+        let rowInstructions = trimmedLine.slice(semicolonIndex + 3)
+
+        // Remove tag section if present
+        const atIndex = rowInstructions.indexOf(' @')
+        if (atIndex !== -1) {
+          rowInstructions = rowInstructions.slice(0, atIndex)
+        }
+
+        let instructions = parseRowInstructions(rowInstructions)
+
+        // On first line, filter instructions (like change_s_coordinates_to_i)
+        if (isFirstCoordLine) {
+          instructions = filterFirstLineInstructions(instructions)
+          isFirstCoordLine = false
+        }
+
+        // Create new block from previous block + instructions
+        currentBlock = this.parseCoordinatesAndEstablishBlock(pBlock, instructions)
+        columns = []
+
+        // Add bases from this line as first column
+        const basesAtIndex = basesAndTags.indexOf(' @')
+        const basesOnly = basesAtIndex !== -1 ? basesAndTags.slice(0, basesAtIndex) : basesAndTags
+        const bases = this.parseBases(basesOnly.trim(), currentBlock.rows.length, runLengthEncodeBases)
+        if (bases.length > 0) {
+          columns.push(bases)
+        }
+      } else if (currentBlock) {
+        // Line without coordinates - just bases
+        const basesAtIndex = trimmedLine.indexOf(' @')
+        const basesOnly = basesAtIndex !== -1 ? trimmedLine.slice(0, basesAtIndex) : trimmedLine
+        const bases = this.parseBases(basesOnly.trim(), currentBlock.rows.length, runLengthEncodeBases)
+        if (bases.length > 0) {
+          columns.push(bases)
+        }
+      }
+    }
+
+    // Finalize last block
+    if (currentBlock && columns.length > 0) {
+      this.finalizeBlock(currentBlock, columns)
+      const feature = this.blockToFeature(currentBlock)
+      if (feature) {
+        features.push(feature)
+      }
+    }
+
+    return features
+  }
+
+  // Transpose columns into rows (like the end of taf_read_block)
+  finalizeBlock(block: AlignmentBlock, columns: string[]) {
+    block.columnNumber = columns.length
+
+    for (let j = 0; j < block.rows.length; j++) {
+      const row = block.rows[j]!
+      let bases = ''
+      let length = 0
+
+      for (let i = 0; i < columns.length; i++) {
+        const col = columns[i]!
+        const base = col[j] ?? '-'
+        bases += base
+        if (base !== '-') {
+          length++
+        }
+      }
+
+      row.bases = bases
+      row.length = length
+    }
+  }
+
+  // Convert a block to a feature (like what BigMafAdapter returns)
+  blockToFeature(block: AlignmentBlock) {
+    if (block.rows.length === 0 || block.columnNumber === 0) {
+      return undefined
+    }
+
+    const row0 = block.rows[0]!
+    const alignments: Record<string, OrganismRecord> = {}
+
+    for (const row of block.rows) {
+      const { assemblyName, chr } = parseAssemblyAndChrSimple(row.sequenceName)
+      alignments[assemblyName] = {
+        chr,
+        start: row.start,
+        srcSize: row.sequenceLength,
+        strand: row.strand,
+        seq: encodeSequence(row.bases),
+      }
+    }
+
+    const nonGapLength = countNonGapBases(row0.bases)
+
+    return {
+      uniqueId: `${row0.start}-${nonGapLength}`,
+      start: row0.start,
+      end: row0.start + nonGapLength,
+      strand: row0.strand,
+      alignments,
+      seq: encodeSequence(row0.bases),
+    }
   }
 
   setupPre() {
@@ -281,11 +379,9 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     return { index, runLengthEncodeBases }
   }
 
-  // Read the TAF header to check for run_length_encode_bases flag
   async readHeader(): Promise<boolean> {
     try {
       const file = openLocation(this.getConf('tafGzLocation'))
-      // Read first block to get header
       const response = await file.read(65536, 0)
       const buffer = await unzip(response)
       const decoder = new TextDecoder('ascii')
@@ -301,34 +397,23 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   }
 
   async readTaiFile() {
-    const text = await openLocation(this.getConf('taiLocation')).readFile(
-      'utf8',
-    )
-    const lines = text
-      .split('\n')
-      .map(f => f.trim())
-      .filter(line => !!line)
+    const text = await openLocation(this.getConf('taiLocation')).readFile('utf8')
+    const lines = text.split('\n').map(f => f.trim()).filter(line => !!line)
     const entries = {} as IndexData
     let lastChr = ''
     let lastChrStart = 0
     let lastRawVirtualOffset = 0
+
     for (const line of lines) {
       const [chr, chrStart, virtualOffset] = line.split('\t')
-
-      // TAI format: when chr is '*', values are relative to previous entry
-      // When chr is a name, values are absolute
       const isRelative = chr === '*'
       const currChr = isRelative ? lastChr : chr!.split('.').at(-1)!
 
-      // Calculate absolute values
       const absVirtualOffset = isRelative
         ? lastRawVirtualOffset + +virtualOffset!
         : +virtualOffset!
       const absChrStart = isRelative ? lastChrStart + +chrStart! : +chrStart!
 
-      // bgzip TAF files store virtual offsets in plaintext in the TAI file
-      // virtual offset = (blockPosition << 16) | dataPosition
-      // extract block position (bits 16+) and data position (bits 0-15)
       const blockPosition = Math.floor(absVirtualOffset / 65536)
       const dataPosition = absVirtualOffset % 65536
       const voff = new VirtualOffset(blockPosition, dataPosition)
@@ -352,21 +437,31 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     return ObservableCreate<Feature>(async observer => {
       try {
         const { index, runLengthEncodeBases } = await this.setup()
-        const feat = await updateStatus(
+        const features = await updateStatus(
           'Downloading alignments',
           statusCallback,
           () => this.getLines(query, index, runLengthEncodeBases),
         )
-        if (feat) {
-          observer.next(
-            // @ts-expect-error
-            new SimpleFeature({
-              ...feat,
-              refName: query.refName,
-            }),
-          )
-        } else {
-          console.error('no feature found')
+
+        if (features && features.length > 0) {
+          // Filter features that overlap with query region
+          for (const feat of features) {
+            if (feat.end > query.start && feat.start < query.end) {
+              observer.next(
+                new SimpleFeature({
+                  id: feat.uniqueId,
+                  data: {
+                    start: feat.start,
+                    end: feat.end,
+                    refName: query.refName,
+                    strand: feat.strand,
+                    alignments: feat.alignments,
+                    seq: feat.seq,
+                  },
+                }),
+              )
+            }
+          }
         }
 
         statusCallback('')
@@ -397,21 +492,15 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   ) {
     const records = byteRanges[query.refName]
     if (records && records.length > 0) {
-      // Use binary search for better performance with large indexes
       const getKey = (r: (typeof records)[0]) => r.chrStart
 
-      // Find first entry: the block containing or just before query.start
       const startIdx = lowerBound(records, query.start, getKey)
       const firstEntry = records[Math.max(startIdx - 1, 0)]
 
-      // Find next entry: the block after query.end
       const endIdx = lowerBound(records, query.end, getKey)
       const nextEntry = records[endIdx + 1] ?? records.at(-1)
 
-      // we NEED at least a firstEntry (validate behavior?) because otherwise
-      // it fetches whole file when you request e.g. out of range region
       if (firstEntry && nextEntry) {
-        // Use a simpler cache key
         const cacheKey = `${firstEntry.virtualOffset}:${nextEntry.virtualOffset}`
         return this.cache.get(cacheKey, {
           nextEntry,
