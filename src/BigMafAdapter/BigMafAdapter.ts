@@ -7,6 +7,7 @@ import { firstValueFrom, toArray } from 'rxjs'
 
 import parseNewick from '../parseNewick'
 import { normalize } from '../util'
+import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
 
 import type { BaseOptions } from '@jbrowse/core/data_adapters/BaseAdapter'
 import type { Feature, Region } from '@jbrowse/core/util'
@@ -103,10 +104,9 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
                 referenceSeq = sequence
               }
 
-              // Parse organism and chromosome once
-              const dotIndex = organismChr.indexOf('.')
-              const org = organismChr.slice(0, Math.max(0, dotIndex))
-              const chr = organismChr.slice(Math.max(0, dotIndex + 1))
+              // Parse organism and chromosome
+              const { assemblyName: org, chr } =
+                parseAssemblyAndChrSimple(organismChr)
 
               // Create alignment record directly
               alignments[org] = {

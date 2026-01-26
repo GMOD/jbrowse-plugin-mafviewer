@@ -1,22 +1,28 @@
 import React, { useEffect, useState } from 'react'
 
-import { ErrorMessage, LoadingEllipses } from '@jbrowse/core/ui'
-import { getSession } from '@jbrowse/core/util'
 import {
-  Button,
-  Checkbox,
-  FormControlLabel,
-  Paper,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
-  Tooltip,
-} from '@mui/material'
+  CascadingMenuButton,
+  ErrorMessage,
+  LoadingEllipses,
+} from '@jbrowse/core/ui'
+import { getSession, useLocalStorage } from '@jbrowse/core/util'
+import { Button, Paper, TextField } from '@mui/material'
+import {
+  ContentCopy as CopyIcon,
+  Difference as DifferenceIcon,
+  Download as DownloadIcon,
+  KeyboardArrowDown,
+  OpenInNew as OpenInNewIcon,
+  PlaylistAdd as InsertionsIcon,
+  Subject as AllLettersIcon,
+  TableRows as TableRowsIcon,
+} from '@mui/icons-material'
 import { observer } from 'mobx-react'
 import { makeStyles } from 'tss-react/mui'
 
 import { copyToClipboard, downloadAsFile } from '../util/clipboard'
 
+import type { MenuItem } from '@jbrowse/core/ui'
 import type { MafSequenceWidgetModel } from './stateModelFactory'
 
 function hasMsaViewPlugin() {
@@ -49,11 +55,6 @@ const useStyles = makeStyles()(theme => ({
       overflow: 'auto !important',
     },
   },
-  buttons: {
-    display: 'flex',
-    gap: theme.spacing(1),
-    marginLeft: 'auto',
-  },
 }))
 
 const MafSequenceWidget = observer(function MafSequenceWidget({
@@ -65,8 +66,18 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
   const session = getSession(model)
   const { adapterConfig, samples, regions, connectedViewId } = model
 
-  const [showAllLetters, setShowAllLetters] = useState(true)
-  const [includeInsertions, setIncludeInsertions] = useState(false)
+  const [showAllLetters, setShowAllLetters] = useLocalStorage(
+    'mafSequenceWidget-showAllLetters',
+    true,
+  )
+  const [includeInsertions, setIncludeInsertions] = useLocalStorage(
+    'mafSequenceWidget-includeInsertions',
+    false,
+  )
+  const [singleLineFormat, setSingleLineFormat] = useLocalStorage(
+    'mafSequenceWidget-singleLineFormat',
+    false,
+  )
   const [sequence, setSequence] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<unknown>()
@@ -97,9 +108,21 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
           },
         )) as string[]
 
-        const formattedSequence = fastaSequence
-          .map((r, idx) => `>${samples[idx]!.label}\n${r}`)
-          .join('\n')
+        let formattedSequence: string
+        if (singleLineFormat) {
+          const maxLabelLength = Math.max(...samples.map(s => s.label.length))
+          formattedSequence = fastaSequence
+            .map((r, idx) => {
+              const label = samples[idx]!.label
+              const padding = ' '.repeat(maxLabelLength - label.length + 2)
+              return `>${label}${padding}${r}`
+            })
+            .join('\n')
+        } else {
+          formattedSequence = fastaSequence
+            .map((r, idx) => `>${samples[idx]!.label}\n${r}`)
+            .join('\n')
+        }
 
         setSequence(formattedSequence)
       } catch (e) {
@@ -115,6 +138,7 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
     regions,
     showAllLetters,
     includeInsertions,
+    singleLineFormat,
     session,
   ])
 
@@ -131,137 +155,147 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
   return (
     <Paper className={classes.root}>
       <div className={classes.controls}>
-        <ToggleButtonGroup
-          value={showAllLetters}
-          exclusive
-          size="small"
-          onChange={(_event, newDisplayMode) => {
-            if (newDisplayMode !== null) {
-              setShowAllLetters(newDisplayMode)
-            }
-          }}
-        >
-          <ToggleButton value={true}>Show All Letters</ToggleButton>
-          <ToggleButton value={false}>Show Only Differences</ToggleButton>
-        </ToggleButtonGroup>
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={includeInsertions}
-              onChange={event => {
-                setIncludeInsertions(event.target.checked)
-              }}
-            />
+        <CascadingMenuButton
+          menuItems={
+            [
+              {
+                label: 'Show all letters',
+                icon: AllLettersIcon,
+                type: 'radio',
+                checked: showAllLetters,
+                onClick: () => {
+                  setShowAllLetters(true)
+                },
+              },
+              {
+                label: 'Show only differences',
+                icon: DifferenceIcon,
+                type: 'radio',
+                checked: !showAllLetters,
+                onClick: () => {
+                  setShowAllLetters(false)
+                },
+              },
+              {
+                label: 'Include insertions',
+                icon: InsertionsIcon,
+                type: 'checkbox',
+                checked: includeInsertions,
+                onClick: () => {
+                  setIncludeInsertions(!includeInsertions)
+                },
+              },
+              {
+                label: 'Single line format',
+                icon: TableRowsIcon,
+                type: 'checkbox',
+                checked: singleLineFormat,
+                onClick: () => {
+                  setSingleLineFormat(!singleLineFormat)
+                },
+              },
+              { type: 'divider' },
+              {
+                label: 'Copy to clipboard',
+                icon: CopyIcon,
+                disabled: loading || !sequence,
+                onClick: () => {
+                  copyToClipboard(
+                    sequence,
+                    () => {
+                      session.notify('Sequence copied to clipboard', 'info')
+                    },
+                    e => {
+                      session.notifyError(`${e}`, e)
+                    },
+                  ).catch((e: unknown) => {
+                    console.error(e)
+                  })
+                },
+              },
+              {
+                label: 'Download as FASTA',
+                icon: DownloadIcon,
+                disabled: loading || !sequence,
+                onClick: () => {
+                  downloadAsFile(
+                    sequence,
+                    'sequence.fasta',
+                    () => {
+                      session.notify('Sequence downloaded', 'info')
+                    },
+                    e => {
+                      session.notifyError(`${e}`, e)
+                    },
+                  )
+                },
+              },
+              {
+                label: 'Open in MSA View',
+                icon: OpenInNewIcon,
+                disabled: loading || !sequence || !msaViewAvailable,
+                subLabel: !msaViewAvailable
+                  ? 'Install jbrowse-plugin-msaview'
+                  : undefined,
+                onClick: () => {
+                  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                  ;(async () => {
+                    try {
+                      const region = regions[0]
+                      const refSample = samples[0]
+
+                      let msaSequence = sequence
+                      if (!showAllLetters) {
+                        const { rpcManager } = session
+                        const fastaSequence = (await rpcManager.call(
+                          'MafSequenceWidget',
+                          'MafGetSequences',
+                          {
+                            sessionId: 'MafSequenceWidget',
+                            adapterConfig,
+                            samples,
+                            showAllLetters: true,
+                            includeInsertions,
+                            regions,
+                          },
+                        )) as string[]
+                        msaSequence = fastaSequence
+                          .map((r, idx) => `>${samples[idx]!.label}\n${r}`)
+                          .join('\n')
+                      }
+
+                      session.addView('MsaView', {
+                        type: 'MsaView',
+                        displayName: region
+                          ? `MAF MSA - ${region.refName}:${region.start + 1}-${region.end}`
+                          : 'MAF MSA',
+                        connectedViewId,
+                        mafRegion: region,
+                        querySeqName: refSample?.label,
+                        init: {
+                          msaData: msaSequence,
+                        },
+                      })
+                    } catch (e) {
+                      console.error(e)
+                      session.notifyError(`${e}`, e)
+                    }
+                  })()
+                },
+              },
+            ] as MenuItem[]
           }
-          label="Include insertions"
-        />
-        <div className={classes.buttons}>
-          <Button
-            variant="contained"
-            color="primary"
-            size="small"
-            disabled={loading || !sequence}
-            onClick={() => {
-              copyToClipboard(
-                sequence,
-                () => {
-                  session.notify('Sequence copied to clipboard', 'info')
-                },
-                e => {
-                  session.notifyError(`${e}`, e)
-                },
-              ).catch((e: unknown) => {
-                console.error(e)
-              })
-            }}
-          >
-            Copy
-          </Button>
-          <Button
-            variant="contained"
-            color="secondary"
-            size="small"
-            disabled={loading || !sequence}
-            onClick={() => {
-              downloadAsFile(
-                sequence,
-                'sequence.fasta',
-                () => {
-                  session.notify('Sequence downloaded', 'info')
-                },
-                e => {
-                  session.notifyError(`${e}`, e)
-                },
-              )
-            }}
-          >
-            Download
-          </Button>
-          {msaViewAvailable ? (
+          ButtonComponent={props => (
             <Button
+              {...props}
               variant="contained"
               size="small"
-              disabled={loading || !sequence}
-              onClick={() => {
-                // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                ;(async () => {
-                  try {
-                    const region = regions[0]
-                    const refSample = samples[0]
-
-                    // Always fetch with showAllLetters=true for MSA view
-                    // (dots don't work well with MSA color schemes)
-                    let msaSequence = sequence
-                    if (!showAllLetters) {
-                      const { rpcManager } = session
-                      const fastaSequence = (await rpcManager.call(
-                        'MafSequenceWidget',
-                        'MafGetSequences',
-                        {
-                          sessionId: 'MafSequenceWidget',
-                          adapterConfig,
-                          samples,
-                          showAllLetters: true,
-                          includeInsertions,
-                          regions,
-                        },
-                      )) as string[]
-                      msaSequence = fastaSequence
-                        .map((r, idx) => `>${samples[idx]!.label}\n${r}`)
-                        .join('\n')
-                    }
-
-                    session.addView('MsaView', {
-                      type: 'MsaView',
-                      displayName: region
-                        ? `MAF MSA - ${region.refName}:${region.start + 1}-${region.end}`
-                        : 'MAF MSA',
-                      connectedViewId,
-                      mafRegion: region,
-                      querySeqName: refSample?.label,
-                      init: {
-                        msaData: msaSequence,
-                      },
-                    })
-                  } catch (e) {
-                    console.error(e)
-                    session.notifyError(`${e}`, e)
-                  }
-                })()
-              }}
+              endIcon={<KeyboardArrowDown />}
             >
-              Open in MSA View
+              Actions
             </Button>
-          ) : (
-            <Tooltip title="Install jbrowse-plugin-msaview to enable this feature">
-              <span>
-                <Button variant="contained" size="small" disabled>
-                  Open in MSA View
-                </Button>
-              </span>
-            </Tooltip>
           )}
-        </div>
+        />
       </div>
 
       {error ? (
