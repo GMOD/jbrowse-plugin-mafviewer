@@ -76,7 +76,13 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
   const [error, setError] = useState<unknown>()
 
   useEffect(() => {
+    console.log('[MafSequenceWidget] useEffect triggered')
+    console.log('[MafSequenceWidget] adapterConfig:', adapterConfig)
+    console.log('[MafSequenceWidget] samples:', samples)
+    console.log('[MafSequenceWidget] regions:', regions)
+
     if (!adapterConfig || !samples || !regions) {
+      console.log('[MafSequenceWidget] Missing required data, returning early')
       return
     }
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -86,6 +92,14 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
         setError(undefined)
 
         const { rpcManager } = session
+
+        console.log('[MafSequenceWidget] Making RPC call MafGetSequences with:', {
+          adapterConfig,
+          samples,
+          showAllLetters,
+          includeInsertions,
+          regions,
+        })
 
         const fastaSequence = (await rpcManager.call(
           'MafSequenceWidget',
@@ -100,6 +114,7 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
           },
         )) as string[]
 
+        console.log('[MafSequenceWidget] RPC result fastaSequence:', fastaSequence)
         setRawSequences(fastaSequence)
 
         let formatted: string
@@ -147,6 +162,7 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
     : false
 
   if (!adapterConfig || !samples || !regions) {
+    console.log('[MafSequenceWidget] Rendering "No sequence data" - adapterConfig:', adapterConfig, 'samples:', samples, 'regions:', regions)
     return (
       <Paper className={classes.root}>
         <div>No sequence data available</div>

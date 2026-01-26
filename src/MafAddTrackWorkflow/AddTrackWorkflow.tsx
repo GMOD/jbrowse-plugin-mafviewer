@@ -37,7 +37,7 @@ const useStyles = makeStyles()(theme => ({
   },
 }))
 
-type AdapterTypeOptions = 'BigMafAdapter' | 'MafTabixAdapter'
+type AdapterTypeOptions = 'BigMafAdapter' | 'MafTabixAdapter' | 'BgzipTaffyAdapter'
 type IndexTypeOptions = 'TBI' | 'CSI'
 
 export default function MultiMAFWidget({ model }: { model: AddTrackModel }) {
@@ -66,7 +66,7 @@ export default function MultiMAFWidget({ model }: { model: AddTrackModel }) {
               setFileTypeChoice(event.target.value as AdapterTypeOptions)
             }}
           >
-            {['BigMafAdapter', 'MafTabixAdapter'].map(r => (
+            {['BigMafAdapter', 'MafTabixAdapter', 'BgzipTaffyAdapter'].map(r => (
               <FormControlLabel
                 key={r}
                 value={r}

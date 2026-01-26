@@ -12,6 +12,10 @@ interface SequenceCanvasProps {
   sequences: string[]
   colorBackground: boolean
   hoveredCol?: number
+  scrollTop: number
+  scrollLeft: number
+  containerHeight: number
+  containerWidth: number
   onHover: (
     col: number | undefined,
     row: number | undefined,
@@ -21,11 +25,18 @@ interface SequenceCanvasProps {
   onLeave: () => void
 }
 
+const OVERSCAN_ROWS = 5
+const OVERSCAN_COLS = 10
+
 export default function SequenceCanvas({
   samples,
   sequences,
   colorBackground,
   hoveredCol,
+  scrollTop,
+  scrollLeft,
+  containerHeight,
+  containerWidth,
   onHover,
   onLeave,
 }: SequenceCanvasProps) {
@@ -33,12 +44,26 @@ export default function SequenceCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const seqLength = sequences[0]?.length || 0
-  const canvasWidth = seqLength * CHAR_WIDTH
-  const canvasHeight = samples.length * ROW_HEIGHT
+
+  // Vertical virtualization
+  const startRow = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN_ROWS)
+  const visibleRows = Math.ceil(containerHeight / ROW_HEIGHT) + OVERSCAN_ROWS * 2
+  const endRow = Math.min(samples.length, startRow + visibleRows)
+  const renderedRowCount = endRow - startRow
+  const canvasHeight = renderedRowCount * ROW_HEIGHT
+  const offsetY = scrollTop - startRow * ROW_HEIGHT
+
+  // Horizontal virtualization
+  const startCol = Math.max(0, Math.floor(scrollLeft / CHAR_WIDTH) - OVERSCAN_COLS)
+  const visibleCols = Math.ceil(containerWidth / CHAR_WIDTH) + OVERSCAN_COLS * 2
+  const endCol = Math.min(seqLength, startCol + visibleCols)
+  const renderedColCount = endCol - startCol
+  const canvasWidth = renderedColCount * CHAR_WIDTH
+  const offsetX = scrollLeft - startCol * CHAR_WIDTH
 
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas) {
+    if (!canvas || canvasWidth <= 0 || canvasHeight <= 0) {
       return
     }
 
@@ -60,13 +85,16 @@ export default function SequenceCanvas({
     ctx.font = FONT
     ctx.textBaseline = 'top'
 
-    for (let rowIdx = 0; rowIdx < samples.length; rowIdx++) {
+    for (let rowIdx = startRow; rowIdx < endRow; rowIdx++) {
       const seq = sequences[rowIdx] || ''
-      const y = rowIdx * ROW_HEIGHT
+      const y = (rowIdx - startRow) * ROW_HEIGHT
 
-      for (let colIdx = 0; colIdx < seq.length; colIdx++) {
-        const char = seq[colIdx]!
-        const x = colIdx * CHAR_WIDTH
+      for (let colIdx = startCol; colIdx < endCol; colIdx++) {
+        const char = seq[colIdx]
+        if (!char) {
+          continue
+        }
+        const x = (colIdx - startCol) * CHAR_WIDTH
 
         if (colorBackground && char !== '-' && char !== '.') {
           ctx.fillStyle = getBaseColor(char, theme)
@@ -99,6 +127,10 @@ export default function SequenceCanvas({
     sequences,
     canvasWidth,
     canvasHeight,
+    startRow,
+    endRow,
+    startCol,
+    endCol,
     hoveredCol,
     colorBackground,
     theme,
@@ -114,21 +146,26 @@ export default function SequenceCanvas({
       const rect = canvas.getBoundingClientRect()
       const x = e.clientX - rect.left
       const y = e.clientY - rect.top
-      const col = Math.floor(x / CHAR_WIDTH)
-      const row = Math.floor(y / ROW_HEIGHT)
+      const col = Math.floor((x + offsetX) / CHAR_WIDTH) + startCol
+      const row = Math.floor((y + offsetY) / ROW_HEIGHT) + startRow
 
       const validCol = col >= 0 && col < seqLength ? col : undefined
       const validRow = row >= 0 && row < samples.length ? row : undefined
 
       onHover(validCol, validRow, e.clientX, e.clientY)
     },
-    [seqLength, samples.length, onHover],
+    [seqLength, samples.length, startRow, startCol, offsetX, offsetY, onHover],
   )
 
   return (
     <canvas
       ref={canvasRef}
-      style={{ display: 'block' }}
+      style={{
+        display: 'block',
+        position: 'relative',
+        top: -offsetY,
+        left: -offsetX,
+      }}
       onMouseMove={handleMouseMove}
       onMouseLeave={onLeave}
     />

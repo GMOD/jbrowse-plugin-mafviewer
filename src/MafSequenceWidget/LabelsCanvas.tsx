@@ -9,21 +9,34 @@ import type { Sample } from '../LinearMafDisplay/types'
 interface LabelsCanvasProps {
   samples: Sample[]
   maxLabelLength: number
+  scrollTop: number
+  containerHeight: number
 }
+
+const OVERSCAN = 5
 
 export default function LabelsCanvas({
   samples,
   maxLabelLength,
+  scrollTop,
+  containerHeight,
 }: LabelsCanvasProps) {
   const theme = useTheme()
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const labelWidth = maxLabelLength * CHAR_WIDTH + LABEL_PADDING
-  const canvasHeight = samples.length * ROW_HEIGHT
+
+  const startRow = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN)
+  const visibleRows = Math.ceil(containerHeight / ROW_HEIGHT) + OVERSCAN * 2
+  const endRow = Math.min(samples.length, startRow + visibleRows)
+  const renderedRowCount = endRow - startRow
+
+  const canvasHeight = renderedRowCount * ROW_HEIGHT
+  const offsetY = scrollTop - startRow * ROW_HEIGHT
 
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas) {
+    if (!canvas || canvasHeight <= 0) {
       return
     }
 
@@ -45,14 +58,23 @@ export default function LabelsCanvas({
     ctx.font = FONT
     ctx.textBaseline = 'top'
 
-    for (let rowIdx = 0; rowIdx < samples.length; rowIdx++) {
+    for (let rowIdx = startRow; rowIdx < endRow; rowIdx++) {
       const sample = samples[rowIdx]!
-      const y = rowIdx * ROW_HEIGHT
+      const y = (rowIdx - startRow) * ROW_HEIGHT
 
       ctx.fillStyle = theme.palette.text.secondary
       ctx.fillText(sample.label ?? sample.id, 2, y + 2)
     }
-  }, [samples, labelWidth, canvasHeight, theme])
+  }, [samples, labelWidth, canvasHeight, startRow, endRow, theme])
 
-  return <canvas ref={canvasRef} style={{ display: 'block' }} />
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        display: 'block',
+        position: 'relative',
+        top: -offsetY,
+      }}
+    />
+  )
 }
