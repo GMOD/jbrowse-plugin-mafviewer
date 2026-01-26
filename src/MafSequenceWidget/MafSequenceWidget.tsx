@@ -13,7 +13,7 @@ import {
   Download as DownloadIcon,
   FormatColorFill as ColorBackgroundIcon,
   KeyboardArrowDown,
-  OpenInNew as OpenInNewIcon,
+  Label as LabelIcon,
   PlaylistAdd as InsertionsIcon,
   Subject as AllLettersIcon,
   TableRows as TableRowsIcon,
@@ -26,11 +26,6 @@ import SequenceDisplay from './SequenceDisplay'
 
 import type { MenuItem } from '@jbrowse/core/ui'
 import type { MafSequenceWidgetModel } from './stateModelFactory'
-
-function hasMsaViewPlugin() {
-  // @ts-expect-error
-  return globalThis.JBrowsePluginMsaView !== undefined
-}
 
 const useStyles = makeStyles()(theme => ({
   root: {
@@ -52,7 +47,7 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
 }) {
   const { classes } = useStyles()
   const session = getSession(model)
-  const { adapterConfig, samples, regions, connectedViewId } = model
+  const { adapterConfig, samples, regions } = model
 
   const [showAllLetters, setShowAllLetters] = useLocalStorage(
     'mafSequenceWidget-showAllLetters',
@@ -70,11 +65,14 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
     'mafSequenceWidget-colorBackground',
     true,
   )
+  const [showSampleNames, setShowSampleNames] = useLocalStorage(
+    'mafSequenceWidget-showSampleNames',
+    true,
+  )
   const [rawSequences, setRawSequences] = useState<string[]>([])
   const [formattedSequence, setFormattedSequence] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<unknown>()
-  const msaViewAvailable = hasMsaViewPlugin()
 
   useEffect(() => {
     if (!adapterConfig || !samples || !regions) {
@@ -200,6 +198,15 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
                   setColorBackground(!colorBackground)
                 },
               },
+              {
+                label: 'Show sample names',
+                icon: LabelIcon,
+                type: 'checkbox',
+                checked: showSampleNames,
+                onClick: () => {
+                  setShowSampleNames(!showSampleNames)
+                },
+              },
               { type: 'divider' },
               {
                 label: 'Copy to clipboard',
@@ -236,59 +243,6 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
                   )
                 },
               },
-              {
-                label: 'Open in MSA View',
-                icon: OpenInNewIcon,
-                disabled: loading || !formattedSequence || !msaViewAvailable,
-                subLabel: !msaViewAvailable
-                  ? 'Install jbrowse-plugin-msaview'
-                  : undefined,
-                onClick: () => {
-                  // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                  ;(async () => {
-                    try {
-                      const region = regions[0]
-                      const refSample = samples[0]
-
-                      let msaSequence = formattedSequence
-                      if (!showAllLetters) {
-                        const { rpcManager } = session
-                        const fastaSequence = (await rpcManager.call(
-                          'MafSequenceWidget',
-                          'MafGetSequences',
-                          {
-                            sessionId: 'MafSequenceWidget',
-                            adapterConfig,
-                            samples,
-                            showAllLetters: true,
-                            includeInsertions,
-                            regions,
-                          },
-                        )) as string[]
-                        msaSequence = fastaSequence
-                          .map((r, idx) => `>${samples[idx]!.label}\n${r}`)
-                          .join('\n')
-                      }
-
-                      session.addView('MsaView', {
-                        type: 'MsaView',
-                        displayName: region
-                          ? `MAF MSA - ${region.refName}:${region.start + 1}-${region.end}`
-                          : 'MAF MSA',
-                        connectedViewId,
-                        mafRegion: region,
-                        querySeqName: refSample?.label,
-                        init: {
-                          msaData: msaSequence,
-                        },
-                      })
-                    } catch (e) {
-                      console.error(e)
-                      session.notifyError(`${e}`, e)
-                    }
-                  })()
-                },
-              },
             ] as MenuItem[]
           }
           ButtonComponent={props => (
@@ -321,6 +275,7 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
               singleLineFormat={singleLineFormat}
               includeInsertions={includeInsertions}
               colorBackground={colorBackground}
+              showSampleNames={showSampleNames}
             />
           )}
         </>
