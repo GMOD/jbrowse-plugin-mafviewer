@@ -7,6 +7,9 @@ import {
 } from '@jbrowse/core/ui'
 import { getSession, useLocalStorage } from '@jbrowse/core/util'
 import { Button, Paper } from '@mui/material'
+import { observer } from 'mobx-react'
+import { makeStyles } from 'tss-react/mui'
+
 import {
   ContentCopy as CopyIcon,
   Difference as DifferenceIcon,
@@ -18,14 +21,12 @@ import {
   Subject as AllLettersIcon,
   TableRows as TableRowsIcon,
 } from '@mui/icons-material'
-import { observer } from 'mobx-react'
-import { makeStyles } from 'tss-react/mui'
 
-import { copyToClipboard, downloadAsFile } from '../util/clipboard'
 import SequenceDisplay from './SequenceDisplay'
+import { copyToClipboard, downloadAsFile } from '../util/clipboard'
 
-import type { MenuItem } from '@jbrowse/core/ui'
 import type { MafSequenceWidgetModel } from './stateModelFactory'
+import type { MenuItem } from '@jbrowse/core/ui'
 
 const useStyles = makeStyles()(theme => ({
   root: {
@@ -103,17 +104,23 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
 
         let formatted: string
         if (singleLineFormat) {
-          const maxLabelLength = Math.max(...samples.map(s => s.label.length))
+          const maxLabelLength = Math.max(
+            ...samples.map(s => (s.label ?? s.id).length),
+          )
           formatted = fastaSequence
             .map((r, idx) => {
-              const label = samples[idx]!.label
+              const sample = samples[idx]!
+              const label = sample.label ?? sample.id
               const padding = ' '.repeat(maxLabelLength - label.length + 2)
               return `>${label}${padding}${r}`
             })
             .join('\n')
         } else {
           formatted = fastaSequence
-            .map((r, idx) => `>${samples[idx]!.label}\n${r}`)
+            .map((r, idx) => {
+              const sample = samples[idx]!
+              return `>${sample.label ?? sample.id}\n${r}`
+            })
             .join('\n')
         }
 

@@ -14,7 +14,9 @@ export interface ParsedAssemblyName {
  * - `assembly.chr.more`: Two dots where middle part is non-numeric
  *   - assemblyName is first part, chr includes rest (e.g., "mm10" and "chr1.random")
  */
-export function parseAssemblyAndChr(assemblyAndChr: string): ParsedAssemblyName {
+export function parseAssemblyAndChr(
+  assemblyAndChr: string,
+): ParsedAssemblyName {
   const firstDotIndex = assemblyAndChr.indexOf('.')
   if (firstDotIndex === -1) {
     return {
@@ -53,7 +55,9 @@ export function parseAssemblyAndChr(assemblyAndChr: string): ParsedAssemblyName 
  * Uses simple dot splitting: org.chr where org is before the first dot,
  * chr is everything after the first dot.
  */
-export function parseAssemblyAndChrSimple(organismChr: string): ParsedAssemblyName {
+export function parseAssemblyAndChrSimple(
+  organismChr: string,
+): ParsedAssemblyName {
   const dotIndex = organismChr.indexOf('.')
   if (dotIndex === -1) {
     return {

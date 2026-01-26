@@ -2,9 +2,9 @@ import { lazy } from 'react'
 
 import WidgetType from '@jbrowse/core/pluggableElementTypes/WidgetType'
 
+import MafSequenceHoverHighlightExtensionF from './MafSequenceHoverHighlightExtension'
 import { configSchema } from './configSchema'
 import { stateModelFactory } from './stateModelFactory'
-import MafSequenceHoverHighlightExtensionF from './MafSequenceHoverHighlightExtension'
 
 import type PluginManager from '@jbrowse/core/PluginManager'
 

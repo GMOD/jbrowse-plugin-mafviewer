@@ -172,12 +172,7 @@ describe('selectReferenceSequence', () => {
   })
 
   test('falls back to queryAssemblyName when refAssemblyName is empty', () => {
-    const result = selectReferenceSequence(
-      alignments,
-      '',
-      'hg38',
-      'panTro6',
-    )
+    const result = selectReferenceSequence(alignments, '', 'hg38', 'panTro6')
     expect(result).toBe('ACGTACGT')
   })
 
@@ -202,12 +197,7 @@ describe('selectReferenceSequence', () => {
   })
 
   test('falls back to firstAssemblyNameFound when both config values are empty', () => {
-    const result = selectReferenceSequence(
-      alignments,
-      '',
-      '',
-      'panTro6',
-    )
+    const result = selectReferenceSequence(alignments, '', '', 'panTro6')
     expect(result).toBe('GGGGGGGG')
   })
 

@@ -1,12 +1,12 @@
-import React, { useEffect, useRef, useMemo, useCallback } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { observer } from 'mobx-react'
 import { makeStyles } from 'tss-react/mui'
 
-import { buildColToGenomePos, findRefSampleIndex } from './colToGenomePos'
 import LabelsCanvas from './LabelsCanvas'
 import SequenceCanvas from './SequenceCanvas'
 import SequenceTooltip from './SequenceTooltip'
+import { buildColToGenomePos, findRefSampleIndex } from './colToGenomePos'
 
 import type { MafSequenceWidgetModel } from './stateModelFactory'
 
@@ -63,7 +63,8 @@ const SequenceDisplay = observer(function SequenceDisplay({
   >()
 
   const maxLabelLength = useMemo(
-    () => (samples ? Math.max(...samples.map(s => s.label.length)) : 0),
+    () =>
+      samples ? Math.max(...samples.map(s => (s.label ?? s.id).length)) : 0,
     [samples],
   )
 

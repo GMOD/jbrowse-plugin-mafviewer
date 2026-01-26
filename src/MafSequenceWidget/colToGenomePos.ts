@@ -28,8 +28,7 @@ export function buildColToGenomePos(
   const mapping: (number | undefined)[] = []
   let genomePos = regionStart
 
-  for (let i = 0; i < refSequence.length; i++) {
-    const char = refSequence[i]
+  for (const char of refSequence) {
     if (char === '-') {
       mapping.push(undefined)
     } else {

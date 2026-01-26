@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useCallback } from 'react'
+import React, { useCallback, useEffect, useRef } from 'react'
 
-import { useTheme, alpha } from '@mui/material'
+import { alpha, useTheme } from '@mui/material'
 
 import { getBaseColor, getContrastText } from './baseColors'
 import { CHAR_WIDTH, FONT, ROW_HEIGHT } from './constants'
@@ -12,7 +12,12 @@ interface SequenceCanvasProps {
   sequences: string[]
   colorBackground: boolean
   hoveredCol?: number
-  onHover: (col: number | undefined, row: number | undefined, clientX: number, clientY: number) => void
+  onHover: (
+    col: number | undefined,
+    row: number | undefined,
+    clientX: number,
+    clientY: number,
+  ) => void
   onLeave: () => void
 }
 
@@ -69,8 +74,10 @@ export default function SequenceCanvas({
         }
 
         if (colIdx === hoveredCol) {
-          // @ts-expect-error highlight is a custom palette extension
-          const highlightColor = theme.palette.highlight?.main ?? '#FFB11D'
+          const highlight = (theme.palette as any).highlight as
+            | { main: string }
+            | undefined
+          const highlightColor = highlight?.main ?? '#FFB11D'
           ctx.fillStyle = alpha(highlightColor, 0.5)
           ctx.fillRect(x, y, CHAR_WIDTH, ROW_HEIGHT)
         }
@@ -87,7 +94,15 @@ export default function SequenceCanvas({
         ctx.fillText(char, x + 2, y + 2)
       }
     }
-  }, [samples, sequences, canvasWidth, canvasHeight, hoveredCol, colorBackground, theme])
+  }, [
+    samples,
+    sequences,
+    canvasWidth,
+    canvasHeight,
+    hoveredCol,
+    colorBackground,
+    theme,
+  ])
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {

@@ -2,8 +2,8 @@ import React from 'react'
 
 import { getSession } from '@jbrowse/core/util'
 import { colord } from '@jbrowse/core/util/colord'
-import { makeStyles } from 'tss-react/mui'
 import { observer } from 'mobx-react'
+import { makeStyles } from 'tss-react/mui'
 
 import type { MafSequenceWidgetModel } from './stateModelFactory'
 import type { LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
@@ -30,7 +30,8 @@ const MafSequenceHoverHighlight = observer(function MafSequenceHoverHighlight({
   const { assemblyManager } = session
 
   // Find MafSequenceWidget instances that are connected to this view
-  const widgets = 'widgets' in session ? (session.widgets as Map<string, unknown>) : undefined
+  const widgets =
+    'widgets' in session ? (session.widgets as Map<string, unknown>) : undefined
   if (!widgets) {
     return null
   }
@@ -38,7 +39,11 @@ const MafSequenceHoverHighlight = observer(function MafSequenceHoverHighlight({
   const highlights: React.ReactNode[] = []
 
   for (const [, widget] of widgets) {
-    const w = widget as { type?: string; connectedViewId?: string; hoverHighlight?: unknown }
+    const w = widget as {
+      type?: string
+      connectedViewId?: string
+      hoverHighlight?: unknown
+    }
     if (w.type === 'MafSequenceWidget' && w.connectedViewId === model.id) {
       const mafWidget = widget as MafSequenceWidgetModel
       const { hoverHighlight } = mafWidget
@@ -46,13 +51,18 @@ const MafSequenceHoverHighlight = observer(function MafSequenceHoverHighlight({
       if (hoverHighlight) {
         const { refName, start, end, assemblyName } = hoverHighlight
         const assembly = assemblyManager.get(assemblyName)
-        const canonicalRefName = assembly?.getCanonicalRefName(refName) ?? refName
+        const canonicalRefName =
+          assembly?.getCanonicalRefName(refName) ?? refName
 
-        const startPx = model.bpToPx({ refName: canonicalRefName, coord: start })
+        const startPx = model.bpToPx({
+          refName: canonicalRefName,
+          coord: start,
+        })
         const endPx = model.bpToPx({ refName: canonicalRefName, coord: end })
 
         if (startPx && endPx) {
-          const left = Math.min(startPx.offsetPx, endPx.offsetPx) - model.offsetPx
+          const left =
+            Math.min(startPx.offsetPx, endPx.offsetPx) - model.offsetPx
           const width = Math.max(Math.abs(endPx.offsetPx - startPx.offsetPx), 3)
 
           highlights.push(

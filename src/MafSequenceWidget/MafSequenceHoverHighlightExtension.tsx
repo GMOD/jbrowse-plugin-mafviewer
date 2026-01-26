@@ -10,7 +10,8 @@ export default function MafSequenceHoverHighlightExtensionF(
 ) {
   pluginManager.addToExtensionPoint(
     'LinearGenomeView-TracksContainerComponent',
-    (rest: React.ReactNode[], { model }: { model: LinearGenomeViewModel }) => {
+    (rest: React.ReactNode[], props: Record<string, unknown>) => {
+      const model = props.model as LinearGenomeViewModel
       return [
         ...rest,
         <MafSequenceHoverHighlight
