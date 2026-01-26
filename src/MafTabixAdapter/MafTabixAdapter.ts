@@ -10,11 +10,15 @@ import {
 } from '@jbrowse/core/util'
 import { openLocation } from '@jbrowse/core/util/io'
 import { ObservableCreate } from '@jbrowse/core/util/rxjs'
-import { getSnapshot } from 'mobx-state-tree'
+import { getSnapshot } from '@jbrowse/mobx-state-tree'
 import { firstValueFrom, toArray } from 'rxjs'
 
 import parseNewick from '../parseNewick'
 import { normalize } from '../util'
+import {
+  parseAssemblyAndChr,
+  selectReferenceSequence,
+} from '../util/parseAssemblyName'
 
 interface OrganismRecord {
   chr: string
@@ -107,53 +111,7 @@ export default class MafTabixAdapter extends BaseFeatureDataAdapter {
               continue
             }
 
-            // Optimized assembly name parsing with simplified logic
-            let assemblyName: string
-            let chr: string
-
-            const firstDotIndex = assemblyAndChr.indexOf('.')
-            if (firstDotIndex === -1) {
-              // No dot found, entire string is assembly name
-              assemblyName = assemblyAndChr
-              chr = ''
-            } else {
-              const secondDotIndex = assemblyAndChr.indexOf(
-                '.',
-                firstDotIndex + 1,
-              )
-              if (secondDotIndex === -1) {
-                // Only one dot: assembly.chr
-                assemblyName = assemblyAndChr.slice(
-                  0,
-                  Math.max(0, firstDotIndex),
-                )
-                chr = assemblyAndChr.slice(Math.max(0, firstDotIndex + 1))
-              } else {
-                // Multiple dots: check if second part is numeric (version number)
-                const secondPart = assemblyAndChr.slice(
-                  firstDotIndex + 1,
-                  secondDotIndex,
-                )
-                const isNumeric =
-                  secondPart.length > 0 && !Number.isNaN(+secondPart)
-
-                if (isNumeric) {
-                  // assembly.version.chr format
-                  assemblyName = assemblyAndChr.slice(
-                    0,
-                    Math.max(0, secondDotIndex),
-                  )
-                  chr = assemblyAndChr.slice(Math.max(0, secondDotIndex + 1))
-                } else {
-                  // assembly.chr.more format
-                  assemblyName = assemblyAndChr.slice(
-                    0,
-                    Math.max(0, firstDotIndex),
-                  )
-                  chr = assemblyAndChr.slice(Math.max(0, firstDotIndex + 1))
-                }
-              }
-            }
+            const { assemblyName, chr } = parseAssemblyAndChr(assemblyAndChr)
 
             if (assemblyName) {
               // Set first assembly name found (only once)
@@ -183,9 +141,12 @@ export default class MafTabixAdapter extends BaseFeatureDataAdapter {
                 name: feature.get('name'),
                 score: feature.get('score'),
                 alignments,
-                seq:
-                  alignments[refAssemblyName || query.assemblyName]?.seq ||
-                  alignments[firstAssemblyNameFound]?.seq,
+                seq: selectReferenceSequence(
+                  alignments,
+                  refAssemblyName,
+                  query.assemblyName,
+                  firstAssemblyNameFound,
+                ),
               },
             }),
           )

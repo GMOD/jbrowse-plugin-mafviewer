@@ -1,7 +1,7 @@
 export interface NodeWithIds {
   id: string
   name: string
-  children: NodeWithIds[]
+  children?: NodeWithIds[]
   length?: number
   noTree?: boolean
 }
@@ -9,7 +9,7 @@ export interface NodeWithIds {
 export interface NodeWithIdsAndLength {
   id: string
   name: string
-  children: NodeWithIdsAndLength[]
+  children?: NodeWithIdsAndLength[]
   noTree?: boolean
   length: number
 }

@@ -2,9 +2,9 @@ import React, { useEffect, useRef } from 'react'
 
 import { ResizeHandle } from '@jbrowse/core/ui'
 import { getContainingView } from '@jbrowse/core/util'
+import { isAlive } from '@jbrowse/mobx-state-tree'
 import { autorun } from 'mobx'
 import { observer } from 'mobx-react'
-import { isAlive } from 'mobx-state-tree'
 import { makeStyles } from 'tss-react/mui'
 
 import type { LinearMafDisplayModel } from '../../stateModel'

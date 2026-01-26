@@ -25,7 +25,7 @@ export interface RenderedBase {
   pos: number
   chr: string
   base: string
-  sampleId: number
+  rowIndex: number
   isInsertion?: boolean
   isLargeInsertion?: boolean
 }

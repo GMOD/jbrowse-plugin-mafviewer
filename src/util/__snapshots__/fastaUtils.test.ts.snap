@@ -7,6 +7,41 @@ exports[`gap in assembly1 1`] = `
 ]
 `;
 
+exports[`includeInsertions - insertions at multiple positions 1`] = `
+[
+  "ATCGGTAC",
+  "A-CG-TAC",
+]
+`;
+
+exports[`includeInsertions - insertions in multiple samples with different lengths 1`] = `
+[
+  "AC-T-GTAC",
+  "ACTTTGTAC",
+]
+`;
+
+exports[`includeInsertions - single insertion in one sample 1`] = `
+[
+  "AC--GTAC",
+  "ACTTGTAC",
+]
+`;
+
+exports[`includeInsertions with no insertions present 1`] = `
+[
+  "ACGTA",
+  "AC-TT",
+]
+`;
+
+exports[`includeInsertions=false ignores insertions 1`] = `
+[
+  "ACGTAC",
+  "ACGTAC",
+]
+`;
+
 exports[`no showAllLetters 1`] = `
 [
   ".....",

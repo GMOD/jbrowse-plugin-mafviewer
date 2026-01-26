@@ -1,15 +1,23 @@
 import { lazy } from 'react'
 
 import { ConfigurationReference, getConf } from '@jbrowse/core/configuration'
-import { getEnv, getSession, max, measureText } from '@jbrowse/core/util'
+import {
+  SessionWithWidgets,
+  getContainingTrack,
+  getContainingView,
+  getEnv,
+  getSession,
+  max,
+  measureText,
+} from '@jbrowse/core/util'
 import { getRpcSessionId } from '@jbrowse/core/util/tracks'
+import { addDisposer, isAlive, types } from '@jbrowse/mobx-state-tree'
 import { ascending } from 'd3-array'
 import { cluster, hierarchy } from 'd3-hierarchy'
 import deepEqual from 'fast-deep-equal'
 import { autorun } from 'mobx'
-import { addDisposer, isAlive, types } from 'mobx-state-tree'
 
-import { maxLength, setBrLength } from './util'
+import { computeNodeDescendantNames, maxLength, setBrLength } from './util'
 import { normalize } from '../util'
 
 import type { NodeWithIds, NodeWithIdsAndLength, Sample } from './types'
@@ -18,16 +26,21 @@ import type {
   AnyConfigurationModel,
   AnyConfigurationSchemaType,
 } from '@jbrowse/core/configuration'
+import type { Instance } from '@jbrowse/mobx-state-tree'
 import type { ExportSvgDisplayOptions } from '@jbrowse/plugin-linear-genome-view'
 import type { HierarchyNode } from 'd3-hierarchy'
-import type { Instance } from 'mobx-state-tree'
+
+const defaultRowHeight = 15
+const defaultRowProportion = 0.8
+const defaultShowAllLetters = false
+const defaultMismatchRendering = true
+const defaultShowBranchLen = false
+const defaultTreeAreaWidth = 80
+const defaultShowAsUpperCase = true
+const defaultShowSidebar = true
 
 const SetRowHeightDialog = lazy(
   () => import('./components/SetRowHeightDialog/SetRowHeightDialog'),
-)
-
-const InsertionSequenceDialog = lazy(
-  () => import('./components/InsertionSequenceDialog/InsertionSequenceDialog'),
 )
 
 /**
@@ -59,37 +72,37 @@ export default function stateModelFactory(
         /**
          * #property
          */
-        rowHeight: 15,
+        rowHeight: defaultRowHeight,
         /**
          * #property
          */
-        rowProportion: 0.8,
+        rowProportion: defaultRowProportion,
         /**
          * #property
          */
-        showAllLetters: false,
+        showAllLetters: defaultShowAllLetters,
         /**
          * #property
          */
-        mismatchRendering: true,
+        mismatchRendering: defaultMismatchRendering,
 
         /**
          * #property
          */
-        showBranchLen: false,
+        showBranchLen: defaultShowBranchLen,
 
         /**
          * #property
          */
-        treeAreaWidth: 80,
+        treeAreaWidth: defaultTreeAreaWidth,
         /**
          * #property
          */
-        showAsUpperCase: true,
+        showAsUpperCase: defaultShowAsUpperCase,
         /**
          * #property
          */
-        showSidebar: true,
+        showSidebar: defaultShowSidebar,
       }),
     )
     .volatile(() => ({
@@ -108,7 +121,7 @@ export default function stateModelFactory(
       /**
        * #volatile
        */
-      volatileTree: undefined as any,
+      volatileTree: undefined as NodeWithIds | undefined,
       /**
        * #volatile
        */
@@ -152,7 +165,13 @@ export default function stateModelFactory(
       /**
        * #action
        */
-      setSamples({ samples, tree }: { samples: Sample[]; tree: unknown }) {
+      setSamples({
+        samples,
+        tree,
+      }: {
+        samples: Sample[]
+        tree: NodeWithIds | undefined
+      }) {
         if (!deepEqual(samples, self.volatileSamples)) {
           self.volatileSamples = samples
         }
@@ -197,14 +216,30 @@ export default function stateModelFactory(
         chr: string
         pos: number
       }) {
-        getSession(self).queueDialog(handleClose => [
-          InsertionSequenceDialog,
+        const { sequence, sampleLabel, chr, pos } = insertionData
+        const session = getSession(self) as SessionWithWidgets
+        const featureWidget = session.addWidget(
+          'BaseFeatureWidget',
+          'baseFeature',
           {
-            model: self,
-            onClose: handleClose,
-            insertionData,
+            featureData: {
+              uniqueId: `insertion-${chr}-${pos}-${sampleLabel}`,
+              type: 'insertion',
+              refName: chr,
+              start: pos,
+              end: pos + 1,
+              sample: sampleLabel,
+              insertionLength: sequence.length,
+              sequence: self.showAsUpperCase
+                ? sequence.toUpperCase()
+                : sequence.toLowerCase(),
+            },
+            view: getContainingView(self),
+            track: getContainingTrack(self),
           },
-        ])
+        )
+
+        session.showWidget(featureWidget)
       },
     }))
     .views(self => ({
@@ -239,8 +274,7 @@ export default function stateModelFactory(
       get root() {
         return self.volatileTree
           ? hierarchy(self.volatileTree, d => d.children)
-              // todo: investigate whether needed, typescript says children always true
-              .sum(d => (d.children ? 0 : 1))
+              .sum(d => (d.children?.length ? 0 : 1))
               .sort((a, b) => ascending(a.data.length || 1, b.data.length || 1))
           : undefined
       },
@@ -264,7 +298,8 @@ export default function stateModelFactory(
           for (const node of r.descendants()) {
             node.x = node.x! + self.rowHeight / 2
           }
-          setBrLength(r, (r.data.length = 0), width / maxLength(r))
+          r.data.length = 0
+          setBrLength(r, 0, width / maxLength(r))
           return r as HierarchyNode<NodeWithIdsAndLength>
         } else {
           return undefined
@@ -311,26 +346,10 @@ export default function stateModelFactory(
        * Precomputed map from hierarchy node to its descendant leaf names
        */
       get nodeDescendantNames() {
-        const map = new Map<unknown, string[]>()
-        function computeDescendants(
-          node: HierarchyNode<NodeWithIdsAndLength>,
-        ): string[] {
-          if (!node.children || node.children.length === 0) {
-            const names = [node.data.name]
-            map.set(node, names)
-            return names
-          }
-          const names: string[] = []
-          for (const child of node.children) {
-            names.push(...computeDescendants(child))
-          }
-          map.set(node, names)
-          return names
-        }
         if (this.hierarchy) {
-          computeDescendants(this.hierarchy)
+          return computeNodeDescendantNames(this.hierarchy)
         }
-        return map
+        return new Map<HierarchyNode<NodeWithIdsAndLength>, string[]>()
       },
       /**
        * #getter
@@ -370,7 +389,7 @@ export default function stateModelFactory(
           return {
             ...s,
             notReady:
-              (!self.volatileSamples && !self.volatileTree) || super.notReady,
+              (!self.volatileSamples && !self.volatileTree) || s.notReady,
             config: rendererConfig,
             samples,
             rowHeight,
@@ -457,6 +476,37 @@ export default function stateModelFactory(
     .views(self => ({
       /**
        * #getter
+       * Get highlight regions from connected MSA views
+       */
+      get msaHighlights() {
+        const session = getSession(self)
+        const view = getContainingView(self)
+        const highlights: { refName: string; start: number; end: number }[] = []
+
+        // Find MSA views that are connected to our parent view
+        for (const v of session.views) {
+          if (
+            (v as { type?: string }).type === 'MsaView' &&
+            (v as { connectedViewId?: string }).connectedViewId === view.id
+          ) {
+            const msaView = v as {
+              connectedHighlights?: {
+                refName: string
+                start: number
+                end: number
+              }[]
+            }
+            if (msaView.connectedHighlights) {
+              for (const h of msaView.connectedHighlights) {
+                highlights.push(h)
+              }
+            }
+          }
+        }
+        return highlights
+      },
+      /**
+       * #getter
        */
       get svgFontSize() {
         return Math.min(Math.max(self.rowHeight, 8), 14)
@@ -500,10 +550,10 @@ export default function stateModelFactory(
                   adapterConfig: self.adapterConfig,
                   statusCallback: (message: string) => {
                     if (isAlive(self)) {
-                      self.setMessage(message)
+                      self.setStatusMessage(message)
                     }
                   },
-                })) as { samples: Sample[]; tree: unknown },
+                })) as { samples: Sample[]; tree: NodeWithIds | undefined },
               )
             } catch (e) {
               console.error(e)
@@ -524,6 +574,43 @@ export default function stateModelFactory(
           const { renderSvg } = await import('./renderSvg')
           return renderSvg(self, opts, superRenderSvg)
         },
+      }
+    })
+    .postProcessSnapshot(snap => {
+      const {
+        rowHeight,
+        rowProportion,
+        showAllLetters,
+        mismatchRendering,
+        showBranchLen,
+        treeAreaWidth,
+        showAsUpperCase,
+        showSidebar,
+        ...rest
+      } = snap as typeof snap & {
+        rowHeight?: number
+        rowProportion?: number
+        showAllLetters?: boolean
+        mismatchRendering?: boolean
+        showBranchLen?: boolean
+        treeAreaWidth?: number
+        showAsUpperCase?: boolean
+        showSidebar?: boolean
+      }
+      return {
+        ...(rest as Omit<typeof rest, symbol>),
+        ...(rowHeight !== defaultRowHeight ? { rowHeight } : {}),
+        ...(rowProportion !== defaultRowProportion ? { rowProportion } : {}),
+        ...(showAllLetters !== defaultShowAllLetters ? { showAllLetters } : {}),
+        ...(mismatchRendering !== defaultMismatchRendering
+          ? { mismatchRendering }
+          : {}),
+        ...(showBranchLen !== defaultShowBranchLen ? { showBranchLen } : {}),
+        ...(treeAreaWidth !== defaultTreeAreaWidth ? { treeAreaWidth } : {}),
+        ...(showAsUpperCase !== defaultShowAsUpperCase
+          ? { showAsUpperCase }
+          : {}),
+        ...(showSidebar !== defaultShowSidebar ? { showSidebar } : {}),
       }
     })
 }

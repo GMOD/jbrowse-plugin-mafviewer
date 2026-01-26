@@ -9,6 +9,7 @@ export default tseslint.config(
       'webpack.config.js',
       'dist/*',
       'esm/*',
+      'test/*.min.js',
       'example/*',
       'eslint.config.mjs',
       'esbuild.mjs',

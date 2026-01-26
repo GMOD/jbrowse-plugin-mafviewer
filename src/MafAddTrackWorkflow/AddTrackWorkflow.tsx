@@ -7,6 +7,7 @@ import {
   isSessionModelWithWidgets,
   isSessionWithAddTracks,
 } from '@jbrowse/core/util'
+import { getRoot } from '@jbrowse/mobx-state-tree'
 import {
   Button,
   FormControl,
@@ -17,7 +18,6 @@ import {
   RadioGroup,
   TextField,
 } from '@mui/material'
-import { getRoot } from 'mobx-state-tree'
 import { makeStyles } from 'tss-react/mui'
 
 import type { AddTrackModel } from '@jbrowse/plugin-data-management'

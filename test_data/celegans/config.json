@@ -3,6 +3,10 @@
     {
       "name": "MafViewer",
       "url": "http://localhost:9000/dist/out.js"
+    },
+    {
+      "name": "MsaView",
+      "url": "http://localhost:9000/test/jbrowse-plugin-msaview.umd.production.min.js"
     }
   ],
   "assemblies": [
@@ -19,7 +23,77 @@
     }
   ],
   "defaultSession": {
-    "name": "New Session"
+    "id": "gfT8w-g7ky",
+    "name": "New Session 1/24/2026, 10:43:20 AM",
+    "views": [
+      {
+        "id": "PIe77WojHs",
+        "type": "LinearGenomeView",
+        "tracks": [
+          {
+            "id": "DWhb1pGF_p",
+            "type": "MafTrack",
+            "configuration": "chrI_newick",
+            "displays": [
+              {
+                "id": "Ex5d3-Mtrz",
+                "type": "LinearMafDisplay",
+                "configuration": "chrI_newick-LinearMafDisplay",
+                "rowHeight": 15,
+                "rowProportion": 0.8,
+                "showAllLetters": false,
+                "mismatchRendering": true,
+                "showBranchLen": false,
+                "treeAreaWidth": 80,
+                "showAsUpperCase": true,
+                "showSidebar": true
+              }
+            ]
+          },
+          {
+            "id": "MoJRwtdFZ1",
+            "type": "FeatureTrack",
+            "configuration": "refGene.gff",
+            "displays": [
+              {
+                "id": "1VqZqgmpbL",
+                "type": "LinearBasicDisplay",
+                "configuration": "refGene.gff-LinearBasicDisplay"
+              }
+            ]
+          }
+        ],
+        "offsetPx": 156888,
+        "bpPerPx": 14.532777080435784,
+        "displayedRegions": [
+          {
+            "reversed": false,
+            "refName": "chrI",
+            "start": 0,
+            "end": 15072423,
+            "assemblyName": "ce10"
+          }
+        ],
+        "trackLabels": "overlapping"
+      }
+    ],
+    "focusedViewId": "PIe77WojHs",
+    "sessionPlugins": [],
+    "widgets": {
+      "GridBookmark": {
+        "id": "GridBookmark",
+        "type": "GridBookmarkWidget"
+      },
+      "hierarchicalTrackSelector": {
+        "id": "hierarchicalTrackSelector",
+        "type": "HierarchicalTrackSelectorWidget",
+        "view": "PIe77WojHs",
+        "faceted": {}
+      }
+    },
+    "activeWidgets": {
+      "hierarchicalTrackSelector": "hierarchicalTrackSelector"
+    }
   },
   "tracks": [
     {

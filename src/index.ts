@@ -8,6 +8,7 @@ import LinearMafRendererF from './LinearMafRenderer'
 import MafAddTrackWorkflowF from './MafAddTrackWorkflow'
 import MafGetSamplesF from './MafGetSamples'
 import MafGetSequencesF from './MafGetSequences'
+import MafSequenceWidgetF from './MafSequenceWidget'
 import MafTabixAdapterF from './MafTabixAdapter'
 import MafTrackF from './MafTrack'
 
@@ -24,6 +25,7 @@ export default class MafViewerPlugin extends Plugin {
     MafAddTrackWorkflowF(pluginManager)
     MafGetSequencesF(pluginManager)
     MafGetSamplesF(pluginManager)
+    MafSequenceWidgetF(pluginManager)
   }
 
   configure(_pluginManager: PluginManager) {}
