@@ -4,6 +4,7 @@ import WidgetType from '@jbrowse/core/pluggableElementTypes/WidgetType'
 
 import { configSchema } from './configSchema'
 import { stateModelFactory } from './stateModelFactory'
+import MafSequenceHoverHighlightExtensionF from './MafSequenceHoverHighlightExtension'
 
 import type PluginManager from '@jbrowse/core/PluginManager'
 
@@ -18,4 +19,6 @@ export default function MafSequenceWidgetF(pluginManager: PluginManager) {
         ReactComponent: lazy(() => import('./MafSequenceWidget')),
       }),
   )
+
+  MafSequenceHoverHighlightExtensionF(pluginManager)
 }

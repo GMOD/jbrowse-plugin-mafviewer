@@ -6,11 +6,12 @@ import {
   LoadingEllipses,
 } from '@jbrowse/core/ui'
 import { getSession, useLocalStorage } from '@jbrowse/core/util'
-import { Button, Paper, TextField } from '@mui/material'
+import { Button, Paper } from '@mui/material'
 import {
   ContentCopy as CopyIcon,
   Difference as DifferenceIcon,
   Download as DownloadIcon,
+  FormatColorFill as ColorBackgroundIcon,
   KeyboardArrowDown,
   OpenInNew as OpenInNewIcon,
   PlaylistAdd as InsertionsIcon,
@@ -21,6 +22,7 @@ import { observer } from 'mobx-react'
 import { makeStyles } from 'tss-react/mui'
 
 import { copyToClipboard, downloadAsFile } from '../util/clipboard'
+import SequenceDisplay from './SequenceDisplay'
 
 import type { MenuItem } from '@jbrowse/core/ui'
 import type { MafSequenceWidgetModel } from './stateModelFactory'
@@ -40,20 +42,6 @@ const useStyles = makeStyles()(theme => ({
     flexWrap: 'wrap',
     gap: theme.spacing(1),
     marginBottom: theme.spacing(2),
-  },
-  textAreaInput: {
-    fontFamily: 'monospace',
-    whiteSpace: 'pre',
-    overflowX: 'auto',
-    overflowY: 'auto',
-  },
-  textField: {
-    '& .MuiInputBase-root': {
-      overflow: 'auto',
-    },
-    '& textarea': {
-      overflow: 'auto !important',
-    },
   },
 }))
 
@@ -78,7 +66,12 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
     'mafSequenceWidget-singleLineFormat',
     false,
   )
-  const [sequence, setSequence] = useState<string>('')
+  const [colorBackground, setColorBackground] = useLocalStorage(
+    'mafSequenceWidget-colorBackground',
+    true,
+  )
+  const [rawSequences, setRawSequences] = useState<string[]>([])
+  const [formattedSequence, setFormattedSequence] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<unknown>()
   const msaViewAvailable = hasMsaViewPlugin()
@@ -108,10 +101,12 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
           },
         )) as string[]
 
-        let formattedSequence: string
+        setRawSequences(fastaSequence)
+
+        let formatted: string
         if (singleLineFormat) {
           const maxLabelLength = Math.max(...samples.map(s => s.label.length))
-          formattedSequence = fastaSequence
+          formatted = fastaSequence
             .map((r, idx) => {
               const label = samples[idx]!.label
               const padding = ' '.repeat(maxLabelLength - label.length + 2)
@@ -119,12 +114,12 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
             })
             .join('\n')
         } else {
-          formattedSequence = fastaSequence
+          formatted = fastaSequence
             .map((r, idx) => `>${samples[idx]!.label}\n${r}`)
             .join('\n')
         }
 
-        setSequence(formattedSequence)
+        setFormattedSequence(formatted)
       } catch (e) {
         console.error(e)
         setError(e)
@@ -142,7 +137,9 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
     session,
   ])
 
-  const sequenceTooLarge = sequence ? sequence.length > 5_000_000 : false
+  const sequenceTooLarge = formattedSequence
+    ? formattedSequence.length > 5_000_000
+    : false
 
   if (!adapterConfig || !samples || !regions) {
     return (
@@ -194,14 +191,23 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
                   setSingleLineFormat(!singleLineFormat)
                 },
               },
+              {
+                label: 'Color background',
+                icon: ColorBackgroundIcon,
+                type: 'checkbox',
+                checked: colorBackground,
+                onClick: () => {
+                  setColorBackground(!colorBackground)
+                },
+              },
               { type: 'divider' },
               {
                 label: 'Copy to clipboard',
                 icon: CopyIcon,
-                disabled: loading || !sequence,
+                disabled: loading || !formattedSequence,
                 onClick: () => {
                   copyToClipboard(
-                    sequence,
+                    formattedSequence,
                     () => {
                       session.notify('Sequence copied to clipboard', 'info')
                     },
@@ -216,10 +222,10 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
               {
                 label: 'Download as FASTA',
                 icon: DownloadIcon,
-                disabled: loading || !sequence,
+                disabled: loading || !formattedSequence,
                 onClick: () => {
                   downloadAsFile(
-                    sequence,
+                    formattedSequence,
                     'sequence.fasta',
                     () => {
                       session.notify('Sequence downloaded', 'info')
@@ -233,7 +239,7 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
               {
                 label: 'Open in MSA View',
                 icon: OpenInNewIcon,
-                disabled: loading || !sequence || !msaViewAvailable,
+                disabled: loading || !formattedSequence || !msaViewAvailable,
                 subLabel: !msaViewAvailable
                   ? 'Install jbrowse-plugin-msaview'
                   : undefined,
@@ -244,7 +250,7 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
                       const region = regions[0]
                       const refSample = samples[0]
 
-                      let msaSequence = sequence
+                      let msaSequence = formattedSequence
                       if (!showAllLetters) {
                         const { rpcManager } = session
                         const fastaSequence = (await rpcManager.call(
@@ -304,28 +310,17 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
         <>
           {loading ? (
             <LoadingEllipses />
+          ) : sequenceTooLarge ? (
+            <div>
+              Reference sequence too large to display, use the Download button
+            </div>
           ) : (
-            <TextField
-              variant="outlined"
-              multiline
-              minRows={5}
-              maxRows={15}
-              disabled={sequenceTooLarge}
-              fullWidth
-              className={classes.textField}
-              value={
-                sequenceTooLarge
-                  ? 'Reference sequence too large to display, use the Download button'
-                  : sequence
-              }
-              slotProps={{
-                input: {
-                  readOnly: true,
-                  classes: {
-                    input: classes.textAreaInput,
-                  },
-                },
-              }}
+            <SequenceDisplay
+              model={model}
+              sequences={rawSequences}
+              singleLineFormat={singleLineFormat}
+              includeInsertions={includeInsertions}
+              colorBackground={colorBackground}
             />
           )}
         </>
