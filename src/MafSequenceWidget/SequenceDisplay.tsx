@@ -6,8 +6,8 @@ import { makeStyles } from 'tss-react/mui'
 import LabelsCanvas from './LabelsCanvas'
 import SequenceCanvas from './SequenceCanvas'
 import SequenceTooltip from './SequenceTooltip'
-import { ROW_HEIGHT, CHAR_WIDTH } from './constants'
 import { buildColToGenomePos, findRefSampleIndex } from './colToGenomePos'
+import { CHAR_WIDTH, ROW_HEIGHT } from './constants'
 
 import type { MafSequenceWidgetModel } from './stateModelFactory'
 
@@ -76,13 +76,9 @@ const SequenceDisplay = observer(function SequenceDisplay({
   const [containerHeight, setContainerHeight] = useState(400)
   const [containerWidth, setContainerWidth] = useState(800)
   const [labelWidth, setLabelWidth] = useState(DEFAULT_LABEL_WIDTH)
-  const [isResizing, setIsResizing] = useState(false)
-
-  const [hoveredCol, setHoveredCol] = useState<number | undefined>()
-  const [hoveredRow, setHoveredRow] = useState<number | undefined>()
-  const [tooltipPos, setTooltipPos] = useState<
-    { x: number; y: number } | undefined
-  >()
+  const [hoveredCol, setHoveredCol] = useState<number>()
+  const [hoveredRow, setHoveredRow] = useState<number>()
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>()
 
   const seqLength = sequences[0]?.length || 0
   const totalSeqWidth = seqLength * CHAR_WIDTH

@@ -4,7 +4,7 @@ export function parseLineByLine<T>(
 ): T[] {
   let blockStart = 0
   const entries: T[] = []
-  const decoder = new TextDecoder('utf8')
+  const decoder = new TextDecoder('ascii')
   while (blockStart < buffer.length) {
     const n = buffer.indexOf(10, blockStart)
     if (n === -1) {

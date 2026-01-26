@@ -185,13 +185,22 @@ const LinearMafDisplay = observer(function (props: {
                 Math.max(contextCoord.dragStartX, contextCoord.dragEndX),
               ]
 
-              const minY = Math.min(contextCoord.dragStartY, contextCoord.dragEndY)
-              const maxY = Math.max(contextCoord.dragStartY, contextCoord.dragEndY)
+              const minY = Math.min(
+                contextCoord.dragStartY,
+                contextCoord.dragEndY,
+              )
+              const maxY = Math.max(
+                contextCoord.dragStartY,
+                contextCoord.dragEndY,
+              )
               const startRowIdx = Math.floor((minY + scrollTop) / rowHeight)
               const endRowIdx = Math.ceil((maxY + scrollTop) / rowHeight)
               const selectedSamples = sources.slice(startRowIdx, endRowIdx)
 
-              if (isSessionModelWithWidgets(session) && selectedSamples.length > 0) {
+              if (
+                isSessionModelWithWidgets(session) &&
+                selectedSamples.length > 0
+              ) {
                 const widget = session.addWidget(
                   'MafSequenceWidget',
                   'mafSequence',

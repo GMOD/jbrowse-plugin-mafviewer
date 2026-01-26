@@ -37,7 +37,10 @@ const useStyles = makeStyles()(theme => ({
   },
 }))
 
-type AdapterTypeOptions = 'BigMafAdapter' | 'MafTabixAdapter' | 'BgzipTaffyAdapter'
+type AdapterTypeOptions =
+  | 'BigMafAdapter'
+  | 'MafTabixAdapter'
+  | 'BgzipTaffyAdapter'
 type IndexTypeOptions = 'TBI' | 'CSI'
 
 export default function MultiMAFWidget({ model }: { model: AddTrackModel }) {
@@ -66,15 +69,17 @@ export default function MultiMAFWidget({ model }: { model: AddTrackModel }) {
               setFileTypeChoice(event.target.value as AdapterTypeOptions)
             }}
           >
-            {['BigMafAdapter', 'MafTabixAdapter', 'BgzipTaffyAdapter'].map(r => (
-              <FormControlLabel
-                key={r}
-                value={r}
-                control={<Radio />}
-                checked={fileTypeChoice === r}
-                label={r}
-              />
-            ))}
+            {['BigMafAdapter', 'MafTabixAdapter', 'BgzipTaffyAdapter'].map(
+              r => (
+                <FormControlLabel
+                  key={r}
+                  value={r}
+                  control={<Radio />}
+                  checked={fileTypeChoice === r}
+                  label={r}
+                />
+              ),
+            )}
           </RadioGroup>
         </FormControl>
         {fileTypeChoice === 'BigMafAdapter' ? (
@@ -86,8 +91,7 @@ export default function MultiMAFWidget({ model }: { model: AddTrackModel }) {
               setLoc(arg)
             }}
           />
-        ) : // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        fileTypeChoice === 'MafTabixAdapter' ? (
+        ) : fileTypeChoice === 'MafTabixAdapter' ? (
           <>
             <FormControl>
               <FormLabel>Index type</FormLabel>
@@ -210,8 +214,7 @@ export default function MultiMAFWidget({ model }: { model: AddTrackModel }) {
                         samples: sampleNames,
                         nhLocation: nhLoc,
                       }
-                    : // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                      fileTypeChoice === 'MafTabixAdapter'
+                    : fileTypeChoice === 'MafTabixAdapter'
                       ? {
                           type: fileTypeChoice,
                           bedGzLocation: loc,

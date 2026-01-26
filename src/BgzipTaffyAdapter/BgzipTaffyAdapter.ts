@@ -17,9 +17,9 @@ import AbortablePromiseCache from 'abortable-promise-cache'
 import VirtualOffset from './virtualOffset'
 import parseNewick from '../parseNewick'
 import { normalize } from '../util'
+import { RowInstruction, parseRowInstructions } from './rowInstructions'
+import { countNonGapBases, parseLineByLine } from './util'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
-import { parseRowInstructions, RowInstruction } from './rowInstructions'
-import { parseLineByLine, countNonGapBases } from './util'
 
 import type { IndexData, OrganismRecord } from './types'
 
@@ -37,7 +37,7 @@ interface SetupData {
   runLengthEncodeBases: boolean
 }
 
-const toP = (s = 0) => +(+s).toFixed(1)
+const toP = (s = 0) => +s.toFixed(1)
 
 export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   public setupP?: Promise<SetupData>
@@ -108,7 +108,8 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
         if (rowInstructions) {
           // Remove any tag section (after @)
           const atIndex = rowInstructions.indexOf(' @')
-          const coordPart = atIndex !== -1 ? rowInstructions.slice(0, atIndex) : rowInstructions
+          const coordPart =
+            atIndex !== -1 ? rowInstructions.slice(0, atIndex) : rowInstructions
           const instructions = parseRowInstructions(coordPart)
 
           for (const ins of instructions) {
@@ -118,12 +119,17 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
 
         // Remove any tags from the bases portion
         const atIndex = basesAndTags.indexOf(' @')
-        const basesOnly = atIndex !== -1 ? basesAndTags.slice(0, atIndex) : basesAndTags
+        const basesOnly =
+          atIndex !== -1 ? basesAndTags.slice(0, atIndex) : basesAndTags
 
         // Parse bases for this column
         // In TAF, each line is a column with one base per row
         const basesStr = basesOnly.trim()
-        const bases = this.parseBases(basesStr, rows.length, runLengthEncodeBases)
+        const bases = this.parseBases(
+          basesStr,
+          rows.length,
+          runLengthEncodeBases,
+        )
 
         // Append each base to the corresponding row
         for (let i = 0; i < bases.length; i++) {
@@ -200,7 +206,9 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       if (row) {
         row.start += ins.gapLength
       }
-    } else if (ins.type === 'G') {
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    else if (ins.type === 'G') {
       // Gap operation with explicit substring: increment start by substring length
       const row = rows[ins.row]
       if (row) {
@@ -265,7 +273,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       // Read first block to get header
       const response = await file.read(65536, 0)
       const buffer = await unzip(response)
-      const decoder = new TextDecoder('utf8')
+      const decoder = new TextDecoder('ascii')
       const text = decoder.decode(buffer.slice(0, 1000))
       const firstLine = text.split('\n')[0] || ''
       if (firstLine.startsWith('#taf')) {
@@ -301,9 +309,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       const absVirtualOffset = isRelative
         ? lastRawVirtualOffset + +virtualOffset!
         : +virtualOffset!
-      const absChrStart = isRelative
-        ? lastChrStart + +chrStart!
-        : +chrStart!
+      const absChrStart = isRelative ? lastChrStart + +chrStart! : +chrStart!
 
       // bgzip TAF files store virtual offsets in plaintext in the TAI file
       // virtual offset = (blockPosition << 16) | dataPosition

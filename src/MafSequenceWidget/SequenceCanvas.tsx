@@ -46,15 +46,22 @@ export default function SequenceCanvas({
   const seqLength = sequences[0]?.length || 0
 
   // Vertical virtualization
-  const startRow = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN_ROWS)
-  const visibleRows = Math.ceil(containerHeight / ROW_HEIGHT) + OVERSCAN_ROWS * 2
+  const startRow = Math.max(
+    0,
+    Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN_ROWS,
+  )
+  const visibleRows =
+    Math.ceil(containerHeight / ROW_HEIGHT) + OVERSCAN_ROWS * 2
   const endRow = Math.min(samples.length, startRow + visibleRows)
   const renderedRowCount = endRow - startRow
   const canvasHeight = renderedRowCount * ROW_HEIGHT
   const offsetY = scrollTop - startRow * ROW_HEIGHT
 
   // Horizontal virtualization
-  const startCol = Math.max(0, Math.floor(scrollLeft / CHAR_WIDTH) - OVERSCAN_COLS)
+  const startCol = Math.max(
+    0,
+    Math.floor(scrollLeft / CHAR_WIDTH) - OVERSCAN_COLS,
+  )
   const visibleCols = Math.ceil(containerWidth / CHAR_WIDTH) + OVERSCAN_COLS * 2
   const endCol = Math.min(seqLength, startCol + visibleCols)
   const renderedColCount = endCol - startCol

@@ -98,7 +98,7 @@ const SvgWrapper = observer(function ({
   if (exportSVG) {
     return <>{children}</>
   } else {
-    const { totalHeight, treeWidth, hierarchy, sidebarWidth } = model
+    const { totalHeight, treeWidth, hierarchy } = model
     const { width } = getContainingView(model) as LinearGenomeViewModel
     return (
       <>
@@ -132,8 +132,12 @@ const SvgWrapper = observer(function ({
         {hierarchy ? (
           <div
             onMouseDown={handleResizeMouseDown}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            onMouseEnter={() => {
+              setIsHovered(true)
+            }}
+            onMouseLeave={() => {
+              setIsHovered(false)
+            }}
             style={{
               position: 'absolute',
               top: 0,
