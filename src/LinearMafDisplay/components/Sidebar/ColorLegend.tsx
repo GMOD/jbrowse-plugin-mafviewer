@@ -27,8 +27,10 @@ const ColorLegend = observer(function ({
   return (
     <>
       <RectBg y={0} x={0} width={sidebarWidth} height={totalHeight} />
-      <Tree model={model} />
-      <g transform={`translate(${treeWidth + 5},0)`}>
+      <g transform="translate(4,0)">
+        <Tree model={model} />
+      </g>
+      <g transform={`translate(${treeWidth + 9},0)`}>
         {samples.map((sample, idx) => (
           <RectBg
             key={`${sample.id}-${idx}`}

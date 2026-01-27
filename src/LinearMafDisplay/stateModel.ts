@@ -11,7 +11,7 @@ import {
   measureText,
 } from '@jbrowse/core/util'
 import { getRpcSessionId } from '@jbrowse/core/util/tracks'
-import { addDisposer, isAlive, types } from '@jbrowse/mobx-state-tree'
+import { addDisposer, cast, isAlive, types } from '@jbrowse/mobx-state-tree'
 import { ascending } from 'd3-array'
 import { cluster, hierarchy } from 'd3-hierarchy'
 import deepEqual from 'fast-deep-equal'
@@ -103,6 +103,10 @@ export default function stateModelFactory(
          * #property
          */
         showSidebar: defaultShowSidebar,
+        /**
+         * #property
+         */
+        subtreeFilter: types.maybe(types.array(types.string)),
       }),
     )
     .volatile(() => ({
@@ -130,6 +134,12 @@ export default function stateModelFactory(
        * #volatile
        */
       hoveredTreeNode: undefined as { x: number; y: number } | undefined,
+      /**
+       * #volatile
+       */
+      treeMenuAnchor: undefined as
+        | { x: number; y: number; names: string[] }
+        | undefined,
     }))
     .actions(self => ({
       /**
@@ -210,6 +220,18 @@ export default function stateModelFactory(
       /**
        * #action
        */
+      setSubtreeFilter(names?: string[]) {
+        self.subtreeFilter = cast(names)
+      },
+      /**
+       * #action
+       */
+      setTreeMenuAnchor(anchor?: { x: number; y: number; names: string[] }) {
+        self.treeMenuAnchor = anchor
+      },
+      /**
+       * #action
+       */
       showInsertionSequenceDialog(insertionData: {
         sequence: string
         sampleLabel: string
@@ -272,11 +294,63 @@ export default function stateModelFactory(
        * #getter
        */
       get root() {
-        return self.volatileTree
-          ? hierarchy(self.volatileTree, d => d.children)
-              .sum(d => (d.children?.length ? 0 : 1))
-              .sort((a, b) => ascending(a.data.length || 1, b.data.length || 1))
-          : undefined
+        if (!self.volatileTree) {
+          return undefined
+        }
+
+        let treeData = self.volatileTree
+
+        // If subtree filter is active, find the subtree node
+        if (self.subtreeFilter && self.subtreeFilter.length > 0) {
+          const filterSet = new Set(self.subtreeFilter)
+
+          // Find the node whose descendants match the filter
+          const findSubtreeRoot = (
+            node: NodeWithIds,
+          ): NodeWithIds | undefined => {
+            const getLeafNames = (n: NodeWithIds): string[] => {
+              if (!n.children || n.children.length === 0) {
+                return n.name ? [n.name] : []
+              }
+              const names: string[] = []
+              for (const child of n.children) {
+                for (const name of getLeafNames(child)) {
+                  names.push(name)
+                }
+              }
+              return names
+            }
+
+            const leafNames = getLeafNames(node)
+            const allMatch =
+              leafNames.length === filterSet.size &&
+              leafNames.every(name => filterSet.has(name))
+
+            if (allMatch) {
+              return node
+            }
+
+            // Search children
+            if (node.children) {
+              for (const child of node.children) {
+                const found = findSubtreeRoot(child)
+                if (found) {
+                  return found
+                }
+              }
+            }
+            return undefined
+          }
+
+          const subtreeRoot = findSubtreeRoot(self.volatileTree)
+          if (subtreeRoot) {
+            treeData = subtreeRoot
+          }
+        }
+
+        return hierarchy(treeData, d => d.children)
+          .sum(d => (d.children?.length ? 0 : 1))
+          .sort((a, b) => ascending(a.data.length || 1, b.data.length || 1))
       },
     }))
     .views(self => ({
@@ -288,16 +362,29 @@ export default function stateModelFactory(
         const r = self.root
         if (r) {
           const width = self.treeAreaWidth
-          // Use totalHeight - rowHeight so leaves are centered in rows
-          // (first leaf at rowHeight/2, last at totalHeight - rowHeight/2)
           const clust = cluster<NodeWithIds>()
             .size([this.totalHeight - self.rowHeight, width])
             .separation(() => 1)
           clust(r)
-          // Offset all nodes by rowHeight/2 to center in rows
-          for (const node of r.descendants()) {
-            node.x = node.x! + self.rowHeight / 2
+
+          // D3's cluster centers leaves within the size and uses spacing of
+          // size*(n-1)/n instead of size/(n-1), which doesn't give us exact
+          // rowHeight spacing. We need leaves at exact multiples of rowHeight
+          // to align with the renderer's row positioning, so we manually
+          // assign leaf positions and recompute internal node positions.
+          const leaves = r.leaves()
+          for (let i = 0; i < leaves.length; i++) {
+            leaves[i]!.x = i * self.rowHeight + self.rowHeight / 2
           }
+          // Recompute internal node x as midpoint of children (bottom-up)
+          r.eachAfter(node => {
+            if (node.children && node.children.length > 0) {
+              node.x =
+                (node.children[0]!.x! +
+                  node.children[node.children.length - 1]!.x!) /
+                2
+            }
+          })
           r.data.length = 0
           setBrLength(r, 0, width / maxLength(r))
           return r as HierarchyNode<NodeWithIdsAndLength>
@@ -309,18 +396,25 @@ export default function stateModelFactory(
        * #getter
        */
       get samples() {
+        let samples: Sample[] | undefined
         if (this.rowNames) {
           const volatileSamplesMap = self.volatileSamples
             ? Object.fromEntries(self.volatileSamples.map(e => [e.id, e]))
             : undefined
-          return normalize(this.rowNames).map(r => ({
+          samples = normalize(this.rowNames).map(r => ({
             ...r,
             label: volatileSamplesMap?.[r.id]?.label || r.label,
             color: volatileSamplesMap?.[r.id]?.color || r.color,
           }))
         } else {
-          return self.volatileSamples
+          samples = self.volatileSamples
         }
+
+        if (samples && self.subtreeFilter) {
+          const filterSet = new Set(self.subtreeFilter)
+          return samples.filter(s => filterSet.has(s.id))
+        }
+        return samples
       },
 
       /**
@@ -438,37 +532,53 @@ export default function stateModelFactory(
               ],
             },
             {
-              label: 'Use upper-case',
-              type: 'checkbox',
-              checked: self.showAsUpperCase,
-              onClick: () => {
-                self.setShowAsUpperCase(!self.showAsUpperCase)
-              },
+              label: 'Show...',
+              type: 'subMenu',
+              subMenu: [
+                {
+                  label: 'Letters at all positions',
+                  type: 'checkbox',
+                  checked: self.showAllLetters,
+                  onClick: () => {
+                    self.setShowAllLetters(!self.showAllLetters)
+                  },
+                },
+                {
+                  label: 'Mismatches colored by base',
+                  type: 'checkbox',
+                  checked: self.mismatchRendering,
+                  onClick: () => {
+                    self.setMismatchRendering(!self.mismatchRendering)
+                  },
+                },
+                {
+                  label: 'Letters as uppercase',
+                  type: 'checkbox',
+                  checked: self.showAsUpperCase,
+                  onClick: () => {
+                    self.setShowAsUpperCase(!self.showAsUpperCase)
+                  },
+                },
+                {
+                  label: 'Sidebar with tree and labels',
+                  type: 'checkbox',
+                  checked: self.showSidebar,
+                  onClick: () => {
+                    self.setShowSidebar(!self.showSidebar)
+                  },
+                },
+              ],
             },
-            {
-              label: 'Show all letters',
-              type: 'checkbox',
-              checked: self.showAllLetters,
-              onClick: () => {
-                self.setShowAllLetters(!self.showAllLetters)
-              },
-            },
-            {
-              label: 'Draw mismatches as single color',
-              type: 'checkbox',
-              checked: !self.mismatchRendering,
-              onClick: () => {
-                self.setMismatchRendering(!self.mismatchRendering)
-              },
-            },
-            {
-              label: 'Show sidebar',
-              type: 'checkbox',
-              checked: self.showSidebar,
-              onClick: () => {
-                self.setShowSidebar(!self.showSidebar)
-              },
-            },
+            ...(self.subtreeFilter
+              ? [
+                  {
+                    label: 'Clear subtree filter',
+                    onClick: () => {
+                      self.setSubtreeFilter(undefined)
+                    },
+                  },
+                ]
+              : []),
           ]
         },
       }
@@ -586,6 +696,7 @@ export default function stateModelFactory(
         treeAreaWidth,
         showAsUpperCase,
         showSidebar,
+        subtreeFilter,
         ...rest
       } = snap as typeof snap & {
         rowHeight?: number
@@ -596,6 +707,7 @@ export default function stateModelFactory(
         treeAreaWidth?: number
         showAsUpperCase?: boolean
         showSidebar?: boolean
+        subtreeFilter?: string[]
       }
       return {
         ...(rest as Omit<typeof rest, symbol>),
@@ -611,6 +723,7 @@ export default function stateModelFactory(
           ? { showAsUpperCase }
           : {}),
         ...(showSidebar !== defaultShowSidebar ? { showSidebar } : {}),
+        ...(subtreeFilter && subtreeFilter.length > 0 ? { subtreeFilter } : {}),
       }
     })
 }

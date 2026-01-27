@@ -77,7 +77,7 @@ export function parseAssemblyAndChrSimple(
  * 2. query.assemblyName (from the region being queried)
  * 3. firstAssemblyNameFound (fallback to first assembly in data)
  */
-export function selectReferenceSequence(
+export function selectReferenceSequenceString(
   alignments: Record<string, { seq: string }>,
   refAssemblyName: string | undefined,
   queryAssemblyName: string | undefined,

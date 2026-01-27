@@ -6,14 +6,6 @@ import type { RenderingContext } from './types'
 
 /**
  * Renders colored rectangles for mismatches and matches (when showAllLetters is true)
- * Colors are determined by base type when mismatchRendering is enabled
- * @param context - Rendering context with canvas and styling info
- * @param alignment - The aligned sequence for this sample
- * @param seq - The reference sequence
- * @param leftPx - Left pixel position of the feature
- * @param rowTop - Top pixel position of the row
- * @param alignmentStart - Start position of the alignment
- * @param chr - Chromosome/sequence name
  */
 export function renderMismatches(
   context: RenderingContext,
@@ -40,12 +32,14 @@ export function renderMismatches(
     i < seqLength;
     i++
   ) {
-    const currentChar = alignment[i]
-    if (seq[i] !== '-') {
-      if (currentChar !== '-') {
+    const alignChar = alignment[i]!
+    const refChar = seq[i]!
+    if (refChar !== '-') {
+      if (alignChar !== '-') {
         const xPos = leftPx + scale * genomicOffset
-        if (seq[i] !== currentChar && currentChar !== ' ') {
-          // Mismatch: use base-specific color or orange
+        const base = alignChar.toLowerCase()
+        if (refChar.toLowerCase() !== base && alignChar !== ' ') {
+          // Mismatch
           fillRect(
             ctx,
             xPos,
@@ -53,29 +47,22 @@ export function renderMismatches(
             scale + GAP_STROKE_OFFSET,
             h,
             canvasWidth,
-            mismatchRendering
-              ? (colorForBase[currentChar!] ?? 'black')
-              : 'orange',
+            mismatchRendering ? (colorForBase[base] ?? 'black') : 'orange',
           )
 
-          // Add to spatial index if distance filter allows
-          if (shouldAddToSpatialIndex(xPos, context)) {
+          if (shouldAddToSpatialIndex(xPos, rowIndex, context)) {
             addToSpatialIndex(
               context,
               xPos,
               rowTop,
               xPos + context.scale + GAP_STROKE_OFFSET,
               rowTop + context.h,
-              {
-                pos: genomicOffset + alignmentStart,
-                chr,
-                base: currentChar!,
-                rowIndex,
-              },
+              rowIndex,
+              { pos: genomicOffset + alignmentStart, chr, base, rowIndex },
             )
           }
         } else if (showAllLetters) {
-          // Match (when showing all letters): use base-specific color or light blue
+          // Match (when showing all letters)
           fillRect(
             ctx,
             xPos,
@@ -83,25 +70,18 @@ export function renderMismatches(
             scale + GAP_STROKE_OFFSET,
             h,
             canvasWidth,
-            mismatchRendering
-              ? (colorForBase[currentChar!] ?? 'black')
-              : 'lightblue',
+            mismatchRendering ? (colorForBase[base] ?? 'black') : 'lightblue',
           )
 
-          // Add to spatial index if distance filter allows
-          if (shouldAddToSpatialIndex(xPos, context)) {
+          if (shouldAddToSpatialIndex(xPos, rowIndex, context)) {
             addToSpatialIndex(
               context,
               xPos,
               rowTop,
               xPos + context.scale + GAP_STROKE_OFFSET,
               rowTop + context.h,
-              {
-                pos: genomicOffset + alignmentStart,
-                chr,
-                base: currentChar!,
-                rowIndex,
-              },
+              rowIndex,
+              { pos: genomicOffset + alignmentStart, chr, base, rowIndex },
             )
           }
         }

@@ -2,7 +2,7 @@ import React from 'react'
 
 import { makeStyles } from 'tss-react/mui'
 
-import type { Sample } from '../LinearMafDisplay/types'
+import type { Sample } from '../types'
 
 const useStyles = makeStyles()(theme => ({
   tooltip: {

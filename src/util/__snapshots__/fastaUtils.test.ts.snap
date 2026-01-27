@@ -3,55 +3,55 @@
 exports[`gap in assembly1 1`] = `
 [
   ".....",
-  "...T.",
+  "...t.",
 ]
 `;
 
 exports[`includeInsertions - insertions at multiple positions 1`] = `
 [
-  "ATCGGTAC",
-  "A-CG-TAC",
+  "atcggtac",
+  "a-cg-tac",
 ]
 `;
 
 exports[`includeInsertions - insertions in multiple samples with different lengths 1`] = `
 [
-  "AC-T-GTAC",
-  "ACTTTGTAC",
+  "ac-t-gtac",
+  "actttgtac",
 ]
 `;
 
 exports[`includeInsertions - single insertion in one sample 1`] = `
 [
-  "AC--GTAC",
-  "ACTTGTAC",
+  "ac--gtac",
+  "acttgtac",
 ]
 `;
 
 exports[`includeInsertions with no insertions present 1`] = `
 [
-  "ACGTA",
-  "AC-TT",
+  "acgta",
+  "ac-tt",
 ]
 `;
 
 exports[`includeInsertions=false ignores insertions 1`] = `
 [
-  "ACGTAC",
-  "ACGTAC",
+  "acgtac",
+  "acgtac",
 ]
 `;
 
 exports[`no showAllLetters 1`] = `
 [
   ".....",
-  "..-.T",
+  "..-.t",
 ]
 `;
 
 exports[`showAllLetters 1`] = `
 [
-  "ACGTA",
-  "AC-TT",
+  "acgta",
+  "ac-tt",
 ]
 `;

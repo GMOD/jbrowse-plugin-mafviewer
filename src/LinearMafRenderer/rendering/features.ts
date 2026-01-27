@@ -20,7 +20,7 @@ export function processFeatureAlignment(
     string,
     AlignmentRecord
   >
-  const referenceSeq = (feature.get('seq') as string).toLowerCase()
+  const referenceSeq = feature.get('seq') as string
 
   for (const [sampleId, alignmentData] of Object.entries(alignments)) {
     const row = sampleToRowMap.get(sampleId)
@@ -28,8 +28,7 @@ export function processFeatureAlignment(
       continue
     }
 
-    const originalAlignment = alignmentData.seq
-    const alignment = originalAlignment.toLowerCase()
+    const alignment = alignmentData.seq
     const rowTop = renderingContext.offset + renderingContext.rowHeight * row
 
     renderGaps(renderingContext, alignment, referenceSeq, leftPx, rowTop)
@@ -44,14 +43,7 @@ export function processFeatureAlignment(
       alignmentData.start,
       alignmentData.chr,
     )
-    renderText(
-      renderingContext,
-      alignment,
-      originalAlignment,
-      referenceSeq,
-      leftPx,
-      rowTop,
-    )
+    renderText(renderingContext, alignment, referenceSeq, leftPx, rowTop)
     renderInsertions(
       renderingContext,
       alignment,

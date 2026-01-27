@@ -1,25 +1,17 @@
 import { BaseFeatureDataAdapter } from '@jbrowse/core/data_adapters/BaseAdapter'
-import { SimpleFeature, updateStatus } from '@jbrowse/core/util'
 import { openLocation } from '@jbrowse/core/util/io'
 import { ObservableCreate } from '@jbrowse/core/util/rxjs'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
-import { firstValueFrom, toArray } from 'rxjs'
 
+import MafFeature from '../MafFeature'
 import parseNewick from '../parseNewick'
 import { normalize } from '../util'
+import { subscribeToObservable } from '../util/observableUtils'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
 
+import type { AlignmentRecord } from '../types'
 import type { BaseOptions } from '@jbrowse/core/data_adapters/BaseAdapter'
 import type { Feature, Region } from '@jbrowse/core/util'
-
-interface OrganismRecord {
-  chr: string
-  start: number
-  srcSize: number
-  strand: number
-  unknown: number
-  seq: string
-}
 export default class BigMafAdapter extends BaseFeatureDataAdapter {
   public setupP?: Promise<{ adapter: BaseFeatureDataAdapter }>
 
@@ -37,12 +29,10 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
     }
   }
   async setupPre() {
-    if (!this.setupP) {
-      this.setupP = this.setup().catch((e: unknown) => {
-        this.setupP = undefined
-        throw e
-      })
-    }
+    this.setupP ??= this.setup().catch((e: unknown) => {
+      this.setupP = undefined
+      throw e
+    })
     return this.setupP
   }
 
@@ -57,87 +47,56 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
   }
 
   getFeatures(query: Region, opts?: BaseOptions) {
-    const { statusCallback = () => {} } = opts || {}
-    // Pre-compile regex for better performance
     const WHITESPACE_REGEX = / +/
 
     return ObservableCreate<Feature>(async observer => {
-      const { adapter } = await this.setup()
-      const features = await updateStatus(
-        'Downloading alignments',
-        statusCallback,
-        () => firstValueFrom(adapter.getFeatures(query).pipe(toArray())),
-      )
-      await updateStatus('Processing alignments', statusCallback, () => {
-        for (const feature of features) {
-          const maf = feature.get('mafBlock') as string
-          const blocks = maf.split(';')
+      const { adapter } = await this.setupPre()
 
-          // Count sequence blocks first to pre-size arrays
-          let sequenceBlockCount = 0
-          for (const block of blocks) {
-            if (block.startsWith('s')) {
-              sequenceBlockCount++
+      await subscribeToObservable(adapter.getFeatures(query, opts), feature => {
+        const maf = feature.get('mafBlock') as string
+        const blocks = maf.split(';')
+        const alignments = {} as Record<string, AlignmentRecord>
+        let referenceSeq: string | undefined
+
+        for (const block of blocks) {
+          if (block.startsWith('s')) {
+            const parts = block.split(WHITESPACE_REGEX)
+            const sequence = parts[6]!
+            const organismChr = parts[1]!
+
+            if (referenceSeq === undefined) {
+              referenceSeq = sequence
+            }
+
+            const { assemblyName: org, chr } =
+              parseAssemblyAndChrSimple(organismChr)
+
+            alignments[org] = {
+              chr,
+              start: +parts[2]!,
+              srcSize: +parts[3]!,
+              strand: parts[4] === '+' ? 1 : -1,
+              unknown: +parts[5]!,
+              seq: sequence,
             }
           }
-
-          // Pre-size arrays based on actual sequence block count
-          const alns = new Array<string>(sequenceBlockCount)
-          const alignments = {} as Record<string, OrganismRecord>
-
-          let sequenceIndex = 0
-          let referenceSeq: string | undefined
-
-          // Single-pass processing: combine both loops
-          for (const block of blocks) {
-            if (block.startsWith('s')) {
-              // Split once and cache the result
-              const parts = block.split(WHITESPACE_REGEX)
-              const sequence = parts[6]!
-              const organismChr = parts[1]!
-
-              // Store sequence in pre-sized array
-              alns[sequenceIndex] = sequence
-
-              // Set reference sequence from first block
-              if (referenceSeq === undefined) {
-                referenceSeq = sequence
-              }
-
-              // Parse organism and chromosome
-              const { assemblyName: org, chr } =
-                parseAssemblyAndChrSimple(organismChr)
-
-              // Create alignment record directly
-              alignments[org] = {
-                chr,
-                start: +parts[2]!,
-                srcSize: +parts[3]!,
-                strand: parts[4] === '+' ? 1 : -1,
-                unknown: +parts[5]!,
-                seq: sequence,
-              }
-
-              sequenceIndex++
-            }
-          }
-
-          observer.next(
-            new SimpleFeature({
-              id: feature.id(),
-              data: {
-                start: feature.get('start'),
-                end: feature.get('end'),
-                refName: feature.get('refName'),
-                seq: referenceSeq,
-                alignments,
-              },
-            }),
-          )
         }
+
+        observer.next(
+          new MafFeature(
+            feature.id(),
+            feature.get('start'),
+            feature.get('end'),
+            feature.get('refName'),
+            0, // strand not in BigMaf format
+            alignments,
+            referenceSeq ?? '',
+          ),
+        )
       })
+
       observer.complete()
-    })
+    }, opts?.stopToken)
   }
 
   async getSamples(_query: Region) {

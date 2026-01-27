@@ -4,7 +4,7 @@ import { firstValueFrom, toArray } from 'rxjs'
 
 import { processFeaturesToFasta } from '../util/fastaUtils'
 
-import type { Sample } from '../LinearMafDisplay/types'
+import type { Sample } from '../types'
 import type { AnyConfigurationModel } from '@jbrowse/core/configuration'
 import type { BaseFeatureDataAdapter } from '@jbrowse/core/data_adapters/BaseAdapter'
 import type { Region } from '@jbrowse/core/util'

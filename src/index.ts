@@ -1,6 +1,7 @@
 import Plugin from '@jbrowse/core/Plugin'
 import PluginManager from '@jbrowse/core/PluginManager'
 
+import BgzipTaffyAdapterF from './BgzipTaffyAdapter'
 import BigMafAdapterF from './BigMafAdapter'
 import LinearMafDisplayF from './LinearMafDisplay'
 import LinearMafRendererF from './LinearMafRenderer'
@@ -17,6 +18,7 @@ export default class MafViewerPlugin extends Plugin {
   version = version
 
   install(pluginManager: PluginManager) {
+    BgzipTaffyAdapterF(pluginManager)
     BigMafAdapterF(pluginManager)
     MafTrackF(pluginManager)
     LinearMafDisplayF(pluginManager)

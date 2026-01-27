@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { observer } from 'mobx-react'
 import { makeStyles } from 'tss-react/mui'
@@ -7,32 +7,48 @@ import LabelsCanvas from './LabelsCanvas'
 import SequenceCanvas from './SequenceCanvas'
 import SequenceTooltip from './SequenceTooltip'
 import { buildColToGenomePos, findRefSampleIndex } from './colToGenomePos'
+import { CHAR_WIDTH, ROW_HEIGHT } from './constants'
 
 import type { MafSequenceWidgetModel } from './stateModelFactory'
+
+const DEFAULT_LABEL_WIDTH = 150
+const MIN_LABEL_WIDTH = 50
+const MAX_LABEL_WIDTH = 400
 
 const useStyles = makeStyles()(theme => ({
   container: {
     border: `1px solid ${theme.palette.divider}`,
     borderRadius: theme.shape.borderRadius,
     maxHeight: 400,
+    width: '100%',
     backgroundColor: theme.palette.background.paper,
     display: 'flex',
     overflow: 'hidden',
+  },
+  labelsWrapper: {
+    flexShrink: 0,
+    overflow: 'hidden',
     position: 'relative',
   },
-  labelsContainer: {
-    flexShrink: 0,
-    borderRight: `1px solid ${theme.palette.divider}`,
-    backgroundColor: theme.palette.background.paper,
-    overflowY: 'auto',
-    scrollbarWidth: 'none',
-    '&::-webkit-scrollbar': {
-      display: 'none',
+  resizeHandle: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 4,
+    height: '100%',
+    cursor: 'col-resize',
+    backgroundColor: theme.palette.divider,
+    '&:hover': {
+      backgroundColor: theme.palette.primary.main,
     },
   },
-  sequenceContainer: {
-    flex: 1,
+  sequenceWrapper: {
+    flexGrow: 1,
+    minWidth: 0,
     overflow: 'auto',
+  },
+  sequenceInner: {
+    position: 'relative',
   },
 }))
 
@@ -52,21 +68,21 @@ const SequenceDisplay = observer(function SequenceDisplay({
   showSampleNames,
 }: SequenceDisplayProps) {
   const { classes } = useStyles()
-  const labelsContainerRef = useRef<HTMLDivElement>(null)
-  const seqContainerRef = useRef<HTMLDivElement>(null)
+  const seqWrapperRef = useRef<HTMLDivElement>(null)
   const { samples, regions } = model
 
-  const [hoveredCol, setHoveredCol] = React.useState<number | undefined>()
-  const [hoveredRow, setHoveredRow] = React.useState<number | undefined>()
-  const [tooltipPos, setTooltipPos] = React.useState<
-    { x: number; y: number } | undefined
-  >()
+  const [scrollTop, setScrollTop] = useState(0)
+  const [scrollLeft, setScrollLeft] = useState(0)
+  const [containerHeight, setContainerHeight] = useState(400)
+  const [containerWidth, setContainerWidth] = useState(800)
+  const [labelWidth, setLabelWidth] = useState(DEFAULT_LABEL_WIDTH)
+  const [hoveredCol, setHoveredCol] = useState<number>()
+  const [hoveredRow, setHoveredRow] = useState<number>()
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>()
 
-  const maxLabelLength = useMemo(
-    () =>
-      samples ? Math.max(...samples.map(s => (s.label ?? s.id).length)) : 0,
-    [samples],
-  )
+  const seqLength = sequences[0]?.length || 0
+  const totalSeqWidth = seqLength * CHAR_WIDTH
+  const totalHeight = samples ? samples.length * ROW_HEIGHT : 0
 
   const colToGenomePos = useMemo(() => {
     if (!regions) {
@@ -82,23 +98,76 @@ const SequenceDisplay = observer(function SequenceDisplay({
     return buildColToGenomePos(refSequence, region.start)
   }, [sequences, regions, samples])
 
-  // Sync vertical scroll between labels and sequences
   useEffect(() => {
-    const labelsContainer = labelsContainerRef.current
-    const seqContainer = seqContainerRef.current
-    if (!labelsContainer || !seqContainer) {
+    const seqWrapper = seqWrapperRef.current
+    if (!seqWrapper) {
       return
     }
 
-    const handleSeqScroll = () => {
-      labelsContainer.scrollTop = seqContainer.scrollTop
+    const handleScroll = () => {
+      setScrollTop(seqWrapper.scrollTop)
+      setScrollLeft(seqWrapper.scrollLeft)
     }
 
-    seqContainer.addEventListener('scroll', handleSeqScroll)
+    seqWrapper.addEventListener('scroll', handleScroll)
     return () => {
-      seqContainer.removeEventListener('scroll', handleSeqScroll)
+      seqWrapper.removeEventListener('scroll', handleScroll)
     }
   }, [])
+
+  useEffect(() => {
+    const seqWrapper = seqWrapperRef.current
+    if (!seqWrapper) {
+      return
+    }
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const { height, width } = entry.contentRect
+        if (height > 0) {
+          setContainerHeight(height)
+        }
+        if (width > 0) {
+          setContainerWidth(width)
+        }
+      }
+    })
+
+    resizeObserver.observe(seqWrapper)
+    setContainerHeight(seqWrapper.clientHeight || 400)
+    setContainerWidth(seqWrapper.clientWidth || 800)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
+
+  // Handle resize drag
+  const handleResizeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      const startX = e.clientX
+      const startWidth = labelWidth
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const delta = moveEvent.clientX - startX
+        const newWidth = Math.min(
+          MAX_LABEL_WIDTH,
+          Math.max(MIN_LABEL_WIDTH, startWidth + delta),
+        )
+        setLabelWidth(newWidth)
+      }
+
+      const handleMouseUp = () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+    },
+    [labelWidth],
+  )
 
   const handleHover = useCallback(
     (
@@ -158,19 +227,40 @@ const SequenceDisplay = observer(function SequenceDisplay({
   return (
     <div className={classes.container}>
       {showSampleNames && (
-        <div ref={labelsContainerRef} className={classes.labelsContainer}>
-          <LabelsCanvas samples={samples} maxLabelLength={maxLabelLength} />
+        <div
+          className={classes.labelsWrapper}
+          style={{ width: labelWidth, height: containerHeight }}
+        >
+          <LabelsCanvas
+            samples={samples}
+            labelWidth={labelWidth}
+            scrollTop={scrollTop}
+            containerHeight={containerHeight}
+          />
+          <div
+            className={classes.resizeHandle}
+            onMouseDown={handleResizeMouseDown}
+          />
         </div>
       )}
-      <div ref={seqContainerRef} className={classes.sequenceContainer}>
-        <SequenceCanvas
-          samples={samples}
-          sequences={sequences}
-          colorBackground={colorBackground}
-          hoveredCol={hoveredCol}
-          onHover={handleHover}
-          onLeave={handleLeave}
-        />
+      <div ref={seqWrapperRef} className={classes.sequenceWrapper}>
+        <div
+          className={classes.sequenceInner}
+          style={{ width: totalSeqWidth, height: totalHeight }}
+        >
+          <SequenceCanvas
+            samples={samples}
+            sequences={sequences}
+            colorBackground={colorBackground}
+            hoveredCol={hoveredCol}
+            scrollTop={scrollTop}
+            scrollLeft={scrollLeft}
+            containerHeight={containerHeight}
+            containerWidth={containerWidth}
+            onHover={handleHover}
+            onLeave={handleLeave}
+          />
+        </div>
       </div>
       {tooltipPos && hoveredSample && (
         <SequenceTooltip

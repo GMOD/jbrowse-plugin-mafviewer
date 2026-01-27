@@ -23,10 +23,13 @@ export function renderMatches(
     i < seqLength;
     i++
   ) {
-    if (seq[i] !== '-') {
-      // Only process non-gap positions in reference
-      const currentChar = alignment[i]
-      if (seq[i] === currentChar && currentChar !== ' ') {
+    const refChar = seq[i]!
+    if (refChar !== '-') {
+      const alignChar = alignment[i]!
+      if (
+        refChar.toLowerCase() === alignChar.toLowerCase() &&
+        alignChar !== ' '
+      ) {
         const xPos = leftPx + scale * genomicOffset
         fillRect(ctx, xPos, rowTop, scale + GAP_STROKE_OFFSET, h, canvasWidth)
       }
