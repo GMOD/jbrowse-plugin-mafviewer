@@ -65,8 +65,9 @@ ACGT
 
         const basesStr = basesAndTags.trim()
         for (let i = 0; i < basesStr.length; i++) {
-          if (rows[i]) {
-            rows[i].seq += basesStr[i]
+          const row = rows[i]
+          if (row) {
+            row.seq += basesStr[i]
           }
         }
       }
@@ -148,8 +149,9 @@ AC ; g 1 50
 
         const basesStr = basesAndTags.trim()
         for (let i = 0; i < basesStr.length; i++) {
-          if (rows[i]) {
-            rows[i].seq += basesStr[i]
+          const row = rows[i]
+          if (row) {
+            row.seq += basesStr[i]
           }
         }
       }
@@ -218,8 +220,9 @@ AB ; d 2
 
         const basesStr = basesAndTags.trim()
         for (let i = 0; i < basesStr.length; i++) {
-          if (rows[i]) {
-            rows[i].seq += basesStr[i]
+          const row = rows[i]
+          if (row) {
+            row.seq += basesStr[i]
           }
         }
       }
@@ -299,8 +302,9 @@ TC
 
         const basesStr = basesAndTags.trim()
         for (let i = 0; i < basesStr.length; i++) {
-          if (rows[i]) {
-            rows[i].seq += basesStr[i]
+          const row = rows[i]
+          if (row) {
+            row.seq += basesStr[i]
           }
         }
       }
