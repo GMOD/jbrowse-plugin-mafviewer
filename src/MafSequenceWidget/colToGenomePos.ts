@@ -1,4 +1,4 @@
-import type { Sample } from '../LinearMafDisplay/types'
+import type { Sample } from '../types'
 
 /**
  * Find the index of the reference sample (matching the assembly name from the region)

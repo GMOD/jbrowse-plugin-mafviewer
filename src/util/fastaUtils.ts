@@ -1,6 +1,4 @@
-import { Sample } from '../LinearMafDisplay/types'
-
-import type { AlignmentRecord } from '../LinearMafRenderer/rendering'
+import type { AlignmentRecord, Sample } from '../types'
 import type { Feature, Region } from '@jbrowse/core/util'
 
 interface InsertionInfo {

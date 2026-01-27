@@ -4,7 +4,7 @@ import { useTheme } from '@mui/material'
 
 import { FONT, ROW_HEIGHT } from './constants'
 
-import type { Sample } from '../LinearMafDisplay/types'
+import type { Sample } from '../types'
 
 interface LabelsCanvasProps {
   samples: Sample[]

@@ -1,21 +1,17 @@
 import { getAdapter } from '@jbrowse/core/data_adapters/dataAdapterCache'
 import { FeatureRendererType } from '@jbrowse/core/pluggableElementTypes'
 import { RenderArgsDeserialized } from '@jbrowse/core/pluggableElementTypes/renderers/BoxRendererType'
-import {
-  Feature,
-  Region,
-  createCanvas,
-  createImageBitmap,
-} from '@jbrowse/core/util'
+import { Feature, Region, createCanvas, createImageBitmap } from '@jbrowse/core/util'
 
 import {
   finalizeRendering,
   initRenderingContext,
   renderFeature,
 } from './makeImageData'
+import { subscribeToObservable } from '../util/observableUtils'
 
+import type { Sample } from '../types'
 import type { BaseFeatureDataAdapter } from '@jbrowse/core/data_adapters/BaseAdapter'
-import type { Sample } from '../LinearMafDisplay/types'
 
 interface RenderArgs extends RenderArgsDeserialized {
   samples: Sample[]
@@ -83,24 +79,20 @@ export default class LinearMafRenderer extends FeatureRendererType {
     const adapter = dataAdapter as BaseFeatureDataAdapter
     const queryRegion = this.getExpandedRegion(region)
 
-    await new Promise<void>((resolve, reject) => {
-      adapter.getFeatures(queryRegion, renderProps).subscribe({
-        next: (feature: Feature) => {
-          if (this.featurePassesFilters(renderProps, feature)) {
-            // Render directly to canvas as features stream in
-            renderFeature(
-              feature,
-              expandedRegion,
-              bpPerPx,
-              sampleToRowMap,
-              renderingContext,
-            )
-          }
-        },
-        error: reject,
-        complete: resolve,
-      })
-    })
+    await subscribeToObservable(
+      adapter.getFeatures(queryRegion, renderProps),
+      (feature: Feature) => {
+        if (this.featurePassesFilters(renderProps, feature)) {
+          renderFeature(
+            feature,
+            expandedRegion,
+            bpPerPx,
+            sampleToRowMap,
+            renderingContext,
+          )
+        }
+      },
+    )
 
     // Finalize rendering and build spatial index
     const { flatbush, items } = finalizeRendering(renderingContext, samples)

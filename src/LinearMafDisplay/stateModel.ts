@@ -532,36 +532,42 @@ export default function stateModelFactory(
               ],
             },
             {
-              label: 'Use upper-case',
-              type: 'checkbox',
-              checked: self.showAsUpperCase,
-              onClick: () => {
-                self.setShowAsUpperCase(!self.showAsUpperCase)
-              },
-            },
-            {
-              label: 'Show all letters',
-              type: 'checkbox',
-              checked: self.showAllLetters,
-              onClick: () => {
-                self.setShowAllLetters(!self.showAllLetters)
-              },
-            },
-            {
-              label: 'Draw mismatches as single color',
-              type: 'checkbox',
-              checked: !self.mismatchRendering,
-              onClick: () => {
-                self.setMismatchRendering(!self.mismatchRendering)
-              },
-            },
-            {
-              label: 'Show sidebar',
-              type: 'checkbox',
-              checked: self.showSidebar,
-              onClick: () => {
-                self.setShowSidebar(!self.showSidebar)
-              },
+              label: 'Show...',
+              type: 'subMenu',
+              subMenu: [
+                {
+                  label: 'All letters',
+                  type: 'checkbox',
+                  checked: self.showAllLetters,
+                  onClick: () => {
+                    self.setShowAllLetters(!self.showAllLetters)
+                  },
+                },
+                {
+                  label: 'Individual mismatch colors',
+                  type: 'checkbox',
+                  checked: self.mismatchRendering,
+                  onClick: () => {
+                    self.setMismatchRendering(!self.mismatchRendering)
+                  },
+                },
+                {
+                  label: 'Uppercase letters',
+                  type: 'checkbox',
+                  checked: self.showAsUpperCase,
+                  onClick: () => {
+                    self.setShowAsUpperCase(!self.showAsUpperCase)
+                  },
+                },
+                {
+                  label: 'Sidebar',
+                  type: 'checkbox',
+                  checked: self.showSidebar,
+                  onClick: () => {
+                    self.setShowSidebar(!self.showSidebar)
+                  },
+                },
+              ],
             },
             ...(self.subtreeFilter
               ? [

@@ -24,7 +24,7 @@ import {
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
 
 import type { RowInstruction } from './rowInstructions'
-import type { IndexData, OrganismRecord } from './types'
+import type { AlignmentRecord, IndexData } from './types'
 
 // Represents a row in the alignment (like Alignment_Row in C)
 interface RowState {
@@ -52,7 +52,7 @@ interface TafFeature {
   start: number
   end: number
   strand: number
-  alignments: Record<string, OrganismRecord>
+  alignments: Record<string, AlignmentRecord>
   seq: string
 }
 
@@ -345,7 +345,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     }
 
     const row0 = block.rows[0]!
-    const alignments: Record<string, OrganismRecord> = {}
+    const alignments: Record<string, AlignmentRecord> = {}
 
     for (const row of block.rows) {
       const { assemblyName, chr } = parseAssemblyAndChrSimple(row.sequenceName)

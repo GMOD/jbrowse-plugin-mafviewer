@@ -6,10 +6,11 @@ import Flatbush from 'flatbush'
 import {
   FONT_CONFIG,
   RenderingContext,
-  Sample,
   processFeatureAlignment,
 } from './rendering'
 import { getCharWidthHeight, getColorBaseMap, getContrastBaseMap } from './util'
+
+import type { Sample } from '../types'
 
 interface BaseRenderArgs extends RenderArgsDeserialized {
   samples: Sample[]

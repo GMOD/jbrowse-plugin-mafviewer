@@ -4,7 +4,7 @@ import { PrerenderedCanvas } from '@jbrowse/core/ui'
 import Flatbush from 'flatbush'
 import { observer } from 'mobx-react'
 
-import type { Sample } from '../../LinearMafDisplay/types'
+import type { Sample } from '../../types'
 import type { RenderedBase } from '../rendering'
 
 interface DisplayModel {

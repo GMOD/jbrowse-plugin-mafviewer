@@ -365,3 +365,179 @@ describe('Encoding algorithm comparison (100kb sequence)', () => {
     encodeSequence(seq100k)
   })
 })
+
+// =============================================================================
+// STREAMING VS NON-STREAMING BENCHMARK
+// =============================================================================
+// This compares the memory and speed characteristics of:
+// 1. Collecting all features into an array first (toArray approach)
+// 2. Processing features as they stream in (streaming approach)
+
+interface SimulatedFeature {
+  id: string
+  start: number
+  end: number
+  seq: string
+  alignments: Record<string, { chr: string; start: number; seq: string }>
+}
+
+// Generate a realistic feature with alignments
+function generateFeature(
+  featureIndex: number,
+  numOrganisms: number,
+  seqLength: number,
+): SimulatedFeature {
+  const orgs = generateOrgNames(numOrganisms)
+  const bases = ['A', 'C', 'G', 'T', '-']
+  const alignments: Record<string, { chr: string; start: number; seq: string }> = {}
+
+  const refSeq = Array.from(
+    { length: seqLength },
+    () => bases[Math.floor(Math.random() * bases.length)],
+  ).join('')
+
+  for (let i = 0; i < numOrganisms; i++) {
+    const org = orgs[i]!
+    const seq = Array.from(
+      { length: seqLength },
+      () => bases[Math.floor(Math.random() * bases.length)],
+    ).join('')
+    alignments[org] = {
+      chr: 'chr1',
+      start: featureIndex * seqLength + i * 100,
+      seq,
+    }
+  }
+
+  return {
+    id: `feature-${featureIndex}`,
+    start: featureIndex * seqLength,
+    end: (featureIndex + 1) * seqLength,
+    seq: refSeq,
+    alignments,
+  }
+}
+
+// Simulate processing a feature (like rendering to canvas)
+function processFeature(feature: SimulatedFeature): number {
+  let result = 0
+  for (const [_org, alignment] of Object.entries(feature.alignments)) {
+    for (let i = 0; i < alignment.seq.length; i++) {
+      // Simulate some work (like checking matches/mismatches)
+      if (alignment.seq[i] === feature.seq[i]) {
+        result++
+      }
+    }
+  }
+  return result
+}
+
+// Non-streaming: Collect all features first, then process
+function nonStreamingApproach(features: SimulatedFeature[]): number {
+  // Step 1: Collect all features (simulating toArray())
+  const collected: SimulatedFeature[] = []
+  for (const f of features) {
+    collected.push(f)
+  }
+
+  // Step 2: Process all collected features
+  let total = 0
+  for (const f of collected) {
+    total += processFeature(f)
+  }
+  return total
+}
+
+// Streaming: Process each feature as it arrives
+function streamingApproach(features: SimulatedFeature[]): number {
+  let total = 0
+  for (const f of features) {
+    // Process immediately, don't store
+    total += processFeature(f)
+  }
+  return total
+}
+
+// Memory measurement helper
+function measureMemory(): number {
+  if (typeof process !== 'undefined' && process.memoryUsage) {
+    return process.memoryUsage().heapUsed
+  }
+  return 0
+}
+
+function forceGC(): void {
+  if (typeof global !== 'undefined' && (global as any).gc) {
+    ;(global as any).gc()
+  }
+}
+
+// Streaming vs Non-streaming speed comparison
+const streamingConfigs = [
+  { name: '100 features, 50 orgs, 1kb', features: 100, organisms: 50, seqLength: 1000 },
+  { name: '50 features, 100 orgs, 2kb', features: 50, organisms: 100, seqLength: 2000 },
+  { name: '20 features, 200 orgs, 5kb', features: 20, organisms: 200, seqLength: 5000 },
+]
+
+for (const config of streamingConfigs) {
+  describe(`Streaming vs Non-Streaming: ${config.name}`, () => {
+    // Pre-generate features for fair comparison
+    const features: SimulatedFeature[] = []
+    for (let i = 0; i < config.features; i++) {
+      features.push(generateFeature(i, config.organisms, config.seqLength))
+    }
+
+    bench('Non-streaming (collect then process)', () => {
+      nonStreamingApproach(features)
+    })
+
+    bench('Streaming (process as received)', () => {
+      streamingApproach(features)
+    })
+  })
+}
+
+// Memory-focused test (run with --expose-gc for accurate results)
+// npx vitest bench --expose-gc
+describe('Memory: Streaming vs Non-Streaming (200 orgs, 10kb, 50 features)', () => {
+  const numFeatures = 50
+  const numOrganisms = 200
+  const seqLength = 10000
+
+  bench('Non-streaming memory pattern', () => {
+    // Generate and collect all features
+    const collected: SimulatedFeature[] = []
+    for (let i = 0; i < numFeatures; i++) {
+      collected.push(generateFeature(i, numOrganisms, seqLength))
+    }
+    // Process after collection
+    let total = 0
+    for (const f of collected) {
+      total += processFeature(f)
+    }
+    // collected array holds all features in memory until end
+    return total
+  })
+
+  bench('Streaming memory pattern', () => {
+    // Generate and process one at a time
+    let total = 0
+    for (let i = 0; i < numFeatures; i++) {
+      const feature = generateFeature(i, numOrganisms, seqLength)
+      total += processFeature(feature)
+      // feature can be GC'd after processing
+    }
+    return total
+  })
+})
+
+// Detailed memory measurement (not a vitest bench, but informative)
+// This shows actual memory difference - run manually
+describe('Memory measurement (manual verification)', () => {
+  bench('Report memory baseline', () => {
+    forceGC()
+    const baseline = measureMemory()
+    // Just return baseline for reference
+    return baseline
+  })
+})

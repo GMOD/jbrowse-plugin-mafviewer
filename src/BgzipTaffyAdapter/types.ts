@@ -1,12 +1,7 @@
 import VirtualOffset from './virtualOffset'
 
-export interface OrganismRecord {
-  chr: string
-  start: number
-  srcSize: number
-  strand: number
-  seq: string
-}
+// Re-export AlignmentRecord from central types for convenience
+export type { AlignmentRecord } from '../types'
 
 export interface ByteRange {
   chrStart: number

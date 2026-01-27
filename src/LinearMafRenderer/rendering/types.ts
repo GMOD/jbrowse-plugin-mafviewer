@@ -1,3 +1,6 @@
+// Re-export shared types from central location
+export type { AlignmentRecord, GenomicRegion, Sample } from '../../types'
+
 // Rendering constants
 export const FONT_CONFIG = 'bold 10px Courier New,monospace'
 export const CHAR_SIZE_WIDTH = 10
@@ -12,14 +15,6 @@ export const MIN_ROW_HEIGHT_FOR_BORDERS = 5
 export const HIGH_BP_PER_PX_THRESHOLD = 10
 export const INSERTION_BORDER_HEIGHT = 5
 export const MIN_X_DISTANCE = 1
-
-export type { Sample } from '../../LinearMafDisplay/types'
-
-export interface GenomicRegion {
-  start: number
-  end: number
-  refName: string
-}
 
 export interface RenderedBase {
   pos: number
@@ -52,17 +47,10 @@ export interface RenderingContext {
   charWidth: number
   charHeight: number
 
-  // RBush spatial index for efficient spatial queries
+  // Flatbush spatial index for efficient spatial queries
   spatialIndex: RenderedBase[]
   spatialIndexCoords: number[]
 
   // Track last X position per row for spatial index optimization
   lastInsertedXPerRow: Map<number, number>
-}
-
-export interface AlignmentRecord {
-  seq: string
-  start: number
-  strand: number
-  chr: string
 }

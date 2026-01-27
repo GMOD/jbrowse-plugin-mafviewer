@@ -6,19 +6,12 @@ import { getSnapshot } from '@jbrowse/mobx-state-tree'
 
 import parseNewick from '../parseNewick'
 import { normalize } from '../util'
+import { subscribeToObservable } from '../util/observableUtils'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
 
+import type { AlignmentRecord } from '../types'
 import type { BaseOptions } from '@jbrowse/core/data_adapters/BaseAdapter'
 import type { Feature, Region } from '@jbrowse/core/util'
-
-interface OrganismRecord {
-  chr: string
-  start: number
-  srcSize: number
-  strand: number
-  unknown: number
-  seq: string
-}
 export default class BigMafAdapter extends BaseFeatureDataAdapter {
   public setupP?: Promise<{ adapter: BaseFeatureDataAdapter }>
 
@@ -54,63 +47,53 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
   }
 
   getFeatures(query: Region, opts?: BaseOptions) {
-    // Pre-compile regex for better performance
     const WHITESPACE_REGEX = / +/
 
     return ObservableCreate<Feature>(async observer => {
       const { adapter } = await this.setupPre()
 
-      // Stream features directly instead of collecting with toArray()
-      // This reduces peak memory from O(all features) to O(1 feature)
-      await new Promise<void>((resolve, reject) => {
-        adapter.getFeatures(query, opts).subscribe({
-          next: feature => {
-            const maf = feature.get('mafBlock') as string
-            const blocks = maf.split(';')
-            const alignments = {} as Record<string, OrganismRecord>
-            let referenceSeq: string | undefined
+      await subscribeToObservable(adapter.getFeatures(query, opts), feature => {
+        const maf = feature.get('mafBlock') as string
+        const blocks = maf.split(';')
+        const alignments = {} as Record<string, AlignmentRecord>
+        let referenceSeq: string | undefined
 
-            for (const block of blocks) {
-              if (block.startsWith('s')) {
-                const parts = block.split(WHITESPACE_REGEX)
-                const sequence = parts[6]!
-                const organismChr = parts[1]!
+        for (const block of blocks) {
+          if (block.startsWith('s')) {
+            const parts = block.split(WHITESPACE_REGEX)
+            const sequence = parts[6]!
+            const organismChr = parts[1]!
 
-                // Set reference sequence from first block
-                if (referenceSeq === undefined) {
-                  referenceSeq = sequence
-                }
-
-                const { assemblyName: org, chr } =
-                  parseAssemblyAndChrSimple(organismChr)
-
-                alignments[org] = {
-                  chr,
-                  start: +parts[2]!,
-                  srcSize: +parts[3]!,
-                  strand: parts[4] === '+' ? 1 : -1,
-                  unknown: +parts[5]!,
-                  seq: sequence,
-                }
-              }
+            if (referenceSeq === undefined) {
+              referenceSeq = sequence
             }
 
-            observer.next(
-              new SimpleFeature({
-                id: feature.id(),
-                data: {
-                  start: feature.get('start'),
-                  end: feature.get('end'),
-                  refName: feature.get('refName'),
-                  seq: referenceSeq,
-                  alignments,
-                },
-              }),
-            )
-          },
-          error: reject,
-          complete: resolve,
-        })
+            const { assemblyName: org, chr } =
+              parseAssemblyAndChrSimple(organismChr)
+
+            alignments[org] = {
+              chr,
+              start: +parts[2]!,
+              srcSize: +parts[3]!,
+              strand: parts[4] === '+' ? 1 : -1,
+              unknown: +parts[5]!,
+              seq: sequence,
+            }
+          }
+        }
+
+        observer.next(
+          new SimpleFeature({
+            id: feature.id(),
+            data: {
+              start: feature.get('start'),
+              end: feature.get('end'),
+              refName: feature.get('refName'),
+              seq: referenceSeq,
+              alignments,
+            },
+          }),
+        )
       })
 
       observer.complete()

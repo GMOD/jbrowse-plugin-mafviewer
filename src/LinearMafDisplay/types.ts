@@ -1,3 +1,6 @@
+// Re-export Sample from central types
+export type { Sample } from '../types'
+
 export interface NodeWithIds {
   id: string
   name: string
@@ -12,10 +15,4 @@ export interface NodeWithIdsAndLength {
   children?: NodeWithIdsAndLength[]
   noTree?: boolean
   length: number
-}
-
-export interface Sample {
-  id: string
-  label?: string
-  color?: string
 }

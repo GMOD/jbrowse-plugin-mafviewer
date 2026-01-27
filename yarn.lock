@@ -597,10 +597,10 @@
   dependencies:
     "@isaacs/balanced-match" "^4.0.1"
 
-"@jbrowse/core@^4.1.1":
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/@jbrowse/core/-/core-4.1.1.tgz#18a165076dda06ed113e8243efe70f463ab8ea91"
-  integrity sha512-fJkz692rDay9iNbJg40F5Huw8uPzlyMLMWwhvvJSg8cUffUF1PFuOWhvU8q2VZngtzSJPKglYs82spZFk69yKg==
+"@jbrowse/core@^4.1.3":
+  version "4.1.3"
+  resolved "https://registry.yarnpkg.com/@jbrowse/core/-/core-4.1.3.tgz#12dfe42757eed4f70ce5e039f2c3ab8e64e1b79e"
+  integrity sha512-Ep6AKutRRktXmdEIWZdbZ1Qcd+OERbA3PEQpKtwLLiFyx0TizPwmWCi1b6foeuKWVEnv3GB4SUOMpujjYcrX3A==
   dependencies:
     "@emotion/react" "^11.14.0"
     "@emotion/serialize" "^1.3.3"
@@ -647,12 +647,12 @@
   resolved "https://registry.yarnpkg.com/@jbrowse/mobx-state-tree/-/mobx-state-tree-5.5.0.tgz#8a892175ea45f4016f919c672100073a409396a8"
   integrity sha512-cZ+FfJMIcxT8MR5Mda4CISmXQjmbSxq78BmIzjG0xqeANeJULf4NgLAteUK6j3Deg6mRrYPJ9HauzMxO/lMsKg==
 
-"@jbrowse/plugin-config@^4.1.1":
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/@jbrowse/plugin-config/-/plugin-config-4.1.1.tgz#6c2f723f6a68e41f85fb9dddcc7cf465d10a4ebe"
-  integrity sha512-YMk5G7smfLFNgIf89+7w7nz7nh+DeC+GIneF85YjbAEDecmYCoEIWs+s/TNtGXEC3uT46wxKLCgPZWHpvcumZA==
+"@jbrowse/plugin-config@^4.1.3":
+  version "4.1.3"
+  resolved "https://registry.yarnpkg.com/@jbrowse/plugin-config/-/plugin-config-4.1.3.tgz#15c3e2f50c65fd68a582967cf3b7c380ecfa2d0e"
+  integrity sha512-3Ifgx83QDaJlDOwMWRXuKlL8zMf51JtEKEgRmyJIx4HMbKiehJ+3+Rvi7+MfsjMSC4N/TOS8XzwmLzy+3RdxOQ==
   dependencies:
-    "@jbrowse/core" "^4.1.1"
+    "@jbrowse/core" "^4.1.3"
     "@jbrowse/mobx-state-tree" "^5.5.0"
     "@mui/icons-material" "^7.3.7"
     "@mui/material" "^7.3.7"
@@ -661,16 +661,16 @@
     pluralize "^8.0.0"
     rxjs "^7.8.2"
 
-"@jbrowse/plugin-data-management@^4.1.1":
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/@jbrowse/plugin-data-management/-/plugin-data-management-4.1.1.tgz#45c200ab6c1d32815c445a1f439e18034527983d"
-  integrity sha512-76LND8JlYkIf3AE1jI9oe3Uwqn3P17vRBAkOaEKhygrk2fR5fcVSf0U74bIiER+cTWfiN7IeLNqjoOcQYe6aDQ==
+"@jbrowse/plugin-data-management@^4.1.3":
+  version "4.1.3"
+  resolved "https://registry.yarnpkg.com/@jbrowse/plugin-data-management/-/plugin-data-management-4.1.3.tgz#edbce4b652428cbcb6e3c1e470cf8bcb54f3eb86"
+  integrity sha512-oRMRUcX2b2nvprhKSMpsDI8yM6mb7G0sS6ngtUdHJ3ur/4g0Ar3QqURGuZtyrPf6dbxXS+4RJjhg/ztvgbZ+WA==
   dependencies:
     "@gmod/ucsc-hub" "^2.0.3"
-    "@jbrowse/core" "^4.1.1"
+    "@jbrowse/core" "^4.1.3"
     "@jbrowse/mobx-state-tree" "^5.5.0"
-    "@jbrowse/plugin-config" "^4.1.1"
-    "@jbrowse/product-core" "^4.1.1"
+    "@jbrowse/plugin-config" "^4.1.3"
+    "@jbrowse/product-core" "^4.1.3"
     "@mui/icons-material" "^7.3.7"
     "@mui/material" "^7.3.7"
     "@mui/x-data-grid" "^8.26.0"
@@ -678,14 +678,14 @@
     mobx "^6.15.0"
     mobx-react "^9.2.1"
 
-"@jbrowse/plugin-linear-genome-view@^4.1.1":
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/@jbrowse/plugin-linear-genome-view/-/plugin-linear-genome-view-4.1.1.tgz#2809ddee3dd5b2517a27a7d47c534c911eee2267"
-  integrity sha512-Br9OvJpGEcLw2/X4scvC6fXyDTGvtQdCsYNWBmUWWIic6gSNKS1Ds53IPMctnVlrI2gw2xypm4rs46G94Sl0KQ==
+"@jbrowse/plugin-linear-genome-view@^4.1.3":
+  version "4.1.3"
+  resolved "https://registry.yarnpkg.com/@jbrowse/plugin-linear-genome-view/-/plugin-linear-genome-view-4.1.3.tgz#70ff111cfba9d2fae3d99a2c8c97315a5b2d73e9"
+  integrity sha512-3JC9NHWaHwPwggl4OGZN5vF+ssHimQTeJuLCDfNG+YC+NQ+nW8iCo/imFs2/40geeVONhDZ9UM49pW0uT2Fs0w==
   dependencies:
-    "@jbrowse/core" "^4.1.1"
+    "@jbrowse/core" "^4.1.3"
     "@jbrowse/mobx-state-tree" "^5.5.0"
-    "@jbrowse/product-core" "^4.1.1"
+    "@jbrowse/product-core" "^4.1.3"
     "@mui/icons-material" "^7.3.7"
     "@mui/material" "^7.3.7"
     "@types/file-saver-es" "^2.0.3"
@@ -694,12 +694,12 @@
     mobx "^6.15.0"
     mobx-react "^9.2.1"
 
-"@jbrowse/product-core@^4.1.1":
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/@jbrowse/product-core/-/product-core-4.1.1.tgz#301f8922788f892d17d8bcfadc18901bea9e15ed"
-  integrity sha512-n9EDYnktTWta7Qwe39ZftDzgFynmFDLQFpTu66MsS+2puxMNcAxBl2PciXyLeSbgB17TocUlVtXvLRASgaJKUw==
+"@jbrowse/product-core@^4.1.3":
+  version "4.1.3"
+  resolved "https://registry.yarnpkg.com/@jbrowse/product-core/-/product-core-4.1.3.tgz#e2faa8b61124451be866ff47a52f2c12fe40d15e"
+  integrity sha512-vbAF2lHLA8xVgNEZBbWYkN8E9jZDyPAQ8+cXGGrzyA6gxdLI87A3lx0xn1dCC1tl6ZbF169SDsn64/xFoCJSnA==
   dependencies:
-    "@jbrowse/core" "^4.1.1"
+    "@jbrowse/core" "^4.1.3"
     "@jbrowse/mobx-state-tree" "^5.5.0"
     "@mui/material" "^7.3.7"
     copy-to-clipboard "^3.3.3"
@@ -1072,10 +1072,10 @@
   resolved "https://registry.yarnpkg.com/@types/react-transition-group/-/react-transition-group-4.4.12.tgz#b5d76568485b02a307238270bfe96cb51ee2a044"
   integrity sha512-8TV6R3h2j7a91c+1DXdJi3Syo69zzIZbz7Lg5tORM5LEJG7X/E6a1V3drRyBRZq7/utz7A+c4OgYLiLcYGHG6w==
 
-"@types/react@^19.0.1":
-  version "19.2.9"
-  resolved "https://registry.yarnpkg.com/@types/react/-/react-19.2.9.tgz#84ec7669742bb3e7e2e8d6a5258d95ead7764200"
-  integrity sha512-Lpo8kgb/igvMIPeNV2rsYKTgaORYdO1XGVZ4Qz3akwOj0ySGYMPlQWa8BaLn0G63D1aSaAQ5ldR06wCpChQCjA==
+"@types/react@^19.2.10":
+  version "19.2.10"
+  resolved "https://registry.yarnpkg.com/@types/react/-/react-19.2.10.tgz#f3ea799e6b4cebad6dfd231c238fc9de7652e2d2"
+  integrity sha512-WPigyYuGhgZ/cTPRXB2EwUw+XvsRA3GqHlsP4qteqrnnjDrApbS7MxcGr/hke5iUoeB7E/gQtrs9I37zAJ0Vjw==
   dependencies:
     csstype "^3.2.2"
 

@@ -5,7 +5,7 @@ import { alpha, useTheme } from '@mui/material'
 import { getBaseColor, getContrastText } from './baseColors'
 import { CHAR_WIDTH, FONT, ROW_HEIGHT } from './constants'
 
-import type { Sample } from '../LinearMafDisplay/types'
+import type { Sample } from '../types'
 
 interface SequenceCanvasProps {
   samples: Sample[]

@@ -2,26 +2,25 @@ import {
   BaseFeatureDataAdapter,
   BaseOptions,
 } from '@jbrowse/core/data_adapters/BaseAdapter'
-import { Feature, Region, SimpleFeature, updateStatus } from '@jbrowse/core/util'
+import {
+  Feature,
+  Region,
+  SimpleFeature,
+  updateStatus,
+} from '@jbrowse/core/util'
 import { openLocation } from '@jbrowse/core/util/io'
 import { ObservableCreate } from '@jbrowse/core/util/rxjs'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
 
 import parseNewick from '../parseNewick'
 import { normalize } from '../util'
+import { subscribeToObservable } from '../util/observableUtils'
 import {
   parseAssemblyAndChr,
   selectReferenceSequenceString,
 } from '../util/parseAssemblyName'
 
-interface OrganismRecord {
-  chr: string
-  start: number
-  srcSize: number
-  strand: number
-  unknown: number
-  seq: string
-}
+import type { AlignmentRecord } from '../types'
 
 export default class MafTabixAdapter extends BaseFeatureDataAdapter {
   public setupP?: Promise<{ adapter: BaseFeatureDataAdapter }>
@@ -72,73 +71,64 @@ export default class MafTabixAdapter extends BaseFeatureDataAdapter {
       let firstAssemblyNameFound = ''
       const refAssemblyName = this.getConf('refAssemblyName')
 
-      // Stream features directly instead of collecting with toArray()
-      // This reduces peak memory from O(all features) to O(1 feature)
-      await new Promise<void>((resolve, reject) => {
-        adapter.getFeatures(query, opts).subscribe({
-          next: feature => {
-            const data = (feature.get('field5') as string).split(',')
-            const alignments = {} as Record<string, OrganismRecord>
-            const dataLength = data.length
+      await subscribeToObservable(adapter.getFeatures(query, opts), feature => {
+        const data = (feature.get('field5') as string).split(',')
+        const alignments = {} as Record<string, AlignmentRecord>
 
-            for (let j = 0; j < dataLength; j++) {
-              const elt = data[j]!
-              const parts = elt.split(':')
+        for (let j = 0, l = data.length; j < l; j++) {
+          const elt = data[j]!
+          const parts = elt.split(':')
 
-              const [
-                assemblyAndChr,
-                startStr,
-                srcSizeStr,
-                strandStr,
-                unknownStr,
-                seq,
-              ] = parts
+          const [
+            assemblyAndChr,
+            startStr,
+            srcSizeStr,
+            strandStr,
+            unknownStr,
+            seq,
+          ] = parts
 
-              if (!assemblyAndChr || !seq) {
-                continue
-              }
+          if (!assemblyAndChr || !seq) {
+            continue
+          }
 
-              const { assemblyName, chr } = parseAssemblyAndChr(assemblyAndChr)
+          const { assemblyName, chr } = parseAssemblyAndChr(assemblyAndChr)
 
-              if (assemblyName) {
-                if (!firstAssemblyNameFound) {
-                  firstAssemblyNameFound = assemblyName
-                }
-
-                alignments[assemblyName] = {
-                  chr,
-                  start: +startStr!,
-                  srcSize: +srcSizeStr!,
-                  strand: strandStr === '-' ? -1 : 1,
-                  unknown: +unknownStr!,
-                  seq,
-                }
-              }
+          if (assemblyName) {
+            if (!firstAssemblyNameFound) {
+              firstAssemblyNameFound = assemblyName
             }
 
-            observer.next(
-              new SimpleFeature({
-                id: feature.id(),
-                data: {
-                  start: feature.get('start'),
-                  end: feature.get('end'),
-                  refName: feature.get('refName'),
-                  name: feature.get('name'),
-                  score: feature.get('score'),
-                  alignments,
-                  seq: selectReferenceSequenceString(
-                    alignments,
-                    refAssemblyName,
-                    query.assemblyName,
-                    firstAssemblyNameFound,
-                  ),
-                },
-              }),
-            )
-          },
-          error: reject,
-          complete: resolve,
-        })
+            alignments[assemblyName] = {
+              chr,
+              start: +startStr!,
+              srcSize: +srcSizeStr!,
+              strand: strandStr === '-' ? -1 : 1,
+              unknown: +unknownStr!,
+              seq,
+            }
+          }
+        }
+
+        observer.next(
+          new SimpleFeature({
+            id: feature.id(),
+            data: {
+              start: feature.get('start'),
+              end: feature.get('end'),
+              refName: feature.get('refName'),
+              name: feature.get('name'),
+              score: feature.get('score'),
+              alignments,
+              seq: selectReferenceSequenceString(
+                alignments,
+                refAssemblyName,
+                query.assemblyName,
+                firstAssemblyNameFound,
+              ),
+            },
+          }),
+        )
       })
 
       observer.complete()
