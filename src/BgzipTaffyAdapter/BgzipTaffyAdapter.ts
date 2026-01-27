@@ -9,10 +9,8 @@ import {
   SimpleFeature,
   updateStatus,
 } from '@jbrowse/core/util'
-import QuickLRU from '@jbrowse/core/util/QuickLRU'
 import { openLocation } from '@jbrowse/core/util/io'
 import { ObservableCreate } from '@jbrowse/core/util/rxjs'
-import AbortablePromiseCache from 'abortable-promise-cache'
 
 import VirtualOffset from './virtualOffset'
 import parseNewick from '../parseNewick'
@@ -32,8 +30,8 @@ interface RowState {
   start: number
   strand: number
   sequenceLength: number
-  bases: string // accumulated bases for this row in current block
-  length: number // non-gap length
+  bases: string
+  length: number
 }
 
 // Represents an alignment block (like Alignment in C)
@@ -74,56 +72,12 @@ function lowerBound<T>(arr: T[], target: number, getKey: (item: T) => number) {
 export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   public setupP?: Promise<SetupData>
 
-  private cache = new AbortablePromiseCache({
-    // @ts-expect-error
-    cache: new QuickLRU({ maxSize: 50 }),
-    // @ts-expect-error
-    fill: async (
-      { nextEntry, firstEntry, runLengthEncodeBases },
-      signal,
-      statusCallback,
-    ) => {
-      const file = openLocation(this.getConf('tafGzLocation'))
-
-      const startBlock = firstEntry.virtualOffset.blockPosition
-      const endBlock = nextEntry.virtualOffset.blockPosition
-
-      // Read enough data to cover the range
-      const MIN_BLOCK_SIZE = 65536
-      const readLength =
-        endBlock > startBlock
-          ? endBlock - startBlock + MIN_BLOCK_SIZE
-          : MIN_BLOCK_SIZE
-
-      const response = await file.read(readLength, startBlock)
-      const buffer = await unzip(response)
-
-      const startOffset = firstEntry.virtualOffset.dataPosition
-      const nextOffset = nextEntry.virtualOffset.dataPosition
-      // When entries are in the same block, use nextOffset only if it's past startOffset.
-      // If they're equal (single entry case), read to end of buffer.
-      const endOffset =
-        endBlock === startBlock && nextOffset > startOffset
-          ? nextOffset
-          : buffer.length
-
-      const slice = buffer.slice(startOffset, endOffset)
-
-      // Parse TAF data into multiple alignment blocks (like taf_read_block)
-      return this.parseTafBlocks(slice, runLengthEncodeBases, {
-        statusCallback: statusCallback as (arg: string) => void,
-        signal,
-      })
-    },
-  })
-
   async getRefNames() {
     const { index } = await this.setup()
     return Object.keys(index)
   }
 
   // Faithful translation of parse_coordinates_and_establish_block from taf.c
-  // Creates a new block by copying from previous block and applying coordinate changes
   parseCoordinatesAndEstablishBlock(
     pBlock: AlignmentBlock | undefined,
     instructions: RowInstruction[],
@@ -133,12 +87,12 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       columnNumber: 0,
     }
 
-    // Copy rows from previous block (like the C code does)
+    // Copy rows from previous block
     if (pBlock) {
       for (const pRow of pBlock.rows) {
         block.rows.push({
           sequenceName: pRow.sequenceName,
-          start: pRow.start + pRow.length, // Start continues from previous end
+          start: pRow.start + pRow.length,
           strand: pRow.strand,
           sequenceLength: pRow.sequenceLength,
           bases: '',
@@ -147,10 +101,9 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       }
     }
 
-    // Apply coordinate instructions (like the C code)
+    // Apply coordinate instructions
     for (const ins of instructions) {
       if (ins.type === 'i') {
-        // Insert new row at specified position
         block.rows.splice(ins.row, 0, {
           sequenceName: ins.sequenceName,
           start: ins.start,
@@ -160,7 +113,6 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
           length: 0,
         })
       } else if (ins.type === 's') {
-        // Substitute coordinates for existing row
         const row = block.rows[ins.row]
         if (row) {
           row.sequenceName = ins.sequenceName
@@ -169,12 +121,10 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
           row.sequenceLength = ins.sequenceLength
         }
       } else if (ins.type === 'd') {
-        // Delete row at specified position
         if (block.rows[ins.row]) {
           block.rows.splice(ins.row, 1)
         }
       } else if (ins.type === 'g') {
-        // Gap: increment start coordinate
         const row = block.rows[ins.row]
         if (row) {
           row.start += ins.gapLength
@@ -182,7 +132,6 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       }
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       else if (ins.type === 'G') {
-        // Gap with substring: increment start by substring length
         const row = block.rows[ins.row]
         if (row) {
           row.start += ins.gapSubstring.length
@@ -193,7 +142,6 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     return block
   }
 
-  // Parse bases from a column (like get_bases in taf.c)
   parseBases(basesStr: string, runLengthEncodeBases: boolean): string {
     if (runLengthEncodeBases) {
       const tokens = basesStr.split(' ')
@@ -210,48 +158,37 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     return basesStr
   }
 
-  // Faithful translation of taf_read_block from taf.c
-  // Parses TAF data into multiple alignment blocks
-  parseTafBlocks(
+  // Streaming generator version of parseTafBlocks
+  // Yields features one at a time instead of collecting into array
+  *parseTafBlocksStreaming(
     buffer: Uint8Array,
     runLengthEncodeBases: boolean,
-    opts?: BaseOptions,
-  ): TafFeature[] {
-    const { statusCallback = () => {} } = opts || {}
-    const features: TafFeature[] = []
-
+  ): Generator<TafFeature> {
     let pBlock: AlignmentBlock | undefined
     let currentBlock: AlignmentBlock | undefined
     let columns: string[] = []
     let isFirstCoordLine = true
-    let lineNum = 0
 
     const decoder = new TextDecoder('ascii')
     const text = decoder.decode(buffer)
     const lines = text.split('\n')
 
     for (const line of lines) {
-      lineNum++
-      if (lineNum % 1000 === 0) {
-        statusCallback(`Processing line ${lineNum}`)
-      }
-
       const trimmedLine = line.trim()
       if (!trimmedLine || trimmedLine.startsWith('#')) {
         continue
       }
 
-      // Check if line has coordinates (contains ' ; ')
       const semicolonIndex = trimmedLine.indexOf(' ; ')
       const hasCoordinates = semicolonIndex !== -1
 
       if (hasCoordinates) {
-        // If we have a current block with columns, finalize it
+        // If we have a current block with columns, finalize and yield it
         if (currentBlock && columns.length > 0) {
           this.finalizeBlock(currentBlock, columns)
           const feature = this.blockToFeature(currentBlock)
           if (feature) {
-            features.push(feature)
+            yield feature
           }
           pBlock = currentBlock
         }
@@ -260,7 +197,6 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
         const basesAndTags = trimmedLine.slice(0, semicolonIndex)
         let rowInstructions = trimmedLine.slice(semicolonIndex + 3)
 
-        // Remove tag section if present
         const atIndex = rowInstructions.indexOf(' @')
         if (atIndex !== -1) {
           rowInstructions = rowInstructions.slice(0, atIndex)
@@ -268,20 +204,17 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
 
         let instructions = parseRowInstructions(rowInstructions)
 
-        // On first line, filter instructions (like change_s_coordinates_to_i)
         if (isFirstCoordLine) {
           instructions = filterFirstLineInstructions(instructions)
           isFirstCoordLine = false
         }
 
-        // Create new block from previous block + instructions
         currentBlock = this.parseCoordinatesAndEstablishBlock(
           pBlock,
           instructions,
         )
         columns = []
 
-        // Add bases from this line as first column
         const basesAtIndex = basesAndTags.indexOf(' @')
         const basesOnly =
           basesAtIndex !== -1
@@ -292,7 +225,6 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
           columns.push(bases)
         }
       } else if (currentBlock) {
-        // Line without coordinates - just bases
         const basesAtIndex = trimmedLine.indexOf(' @')
         const basesOnly =
           basesAtIndex !== -1 ? trimmedLine.slice(0, basesAtIndex) : trimmedLine
@@ -303,19 +235,25 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       }
     }
 
-    // Finalize last block
+    // Finalize and yield last block
     if (currentBlock && columns.length > 0) {
       this.finalizeBlock(currentBlock, columns)
       const feature = this.blockToFeature(currentBlock)
       if (feature) {
-        features.push(feature)
+        yield feature
       }
     }
-
-    return features
   }
 
-  // Transpose columns into rows (like the end of taf_read_block)
+  // Non-streaming version for backward compatibility (used in tests)
+  parseTafBlocks(
+    buffer: Uint8Array,
+    runLengthEncodeBases: boolean,
+    _opts?: BaseOptions,
+  ): TafFeature[] {
+    return [...this.parseTafBlocksStreaming(buffer, runLengthEncodeBases)]
+  }
+
   finalizeBlock(block: AlignmentBlock, columns: string[]) {
     block.columnNumber = columns.length
 
@@ -338,7 +276,6 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     }
   }
 
-  // Convert a block to a feature (like what BigMafAdapter returns)
   blockToFeature(block: AlignmentBlock): TafFeature | undefined {
     if (block.rows.length === 0 || block.columnNumber === 0) {
       return undefined
@@ -455,31 +392,73 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     const { statusCallback = () => {} } = opts || {}
     return ObservableCreate<Feature>(async observer => {
       try {
-        const { index, runLengthEncodeBases } = await this.setup()
-        const features = await updateStatus(
+        const { index, runLengthEncodeBases } = await this.setup(opts)
+
+        // Get byte range for this query
+        const records = index[query.refName]
+        if (!records || records.length === 0) {
+          observer.complete()
+          return
+        }
+
+        const getKey = (r: (typeof records)[0]) => r.chrStart
+        const startIdx = lowerBound(records, query.start, getKey)
+        const firstEntry = records[Math.max(startIdx - 1, 0)]
+        const endIdx = lowerBound(records, query.end, getKey)
+        const nextEntry = records[endIdx + 1] ?? records.at(-1)
+
+        if (!firstEntry || !nextEntry) {
+          observer.complete()
+          return
+        }
+
+        // Read and decompress the data
+        const file = openLocation(this.getConf('tafGzLocation'))
+        const startBlock = firstEntry.virtualOffset.blockPosition
+        const endBlock = nextEntry.virtualOffset.blockPosition
+
+        const MIN_BLOCK_SIZE = 65536
+        const readLength =
+          endBlock > startBlock
+            ? endBlock - startBlock + MIN_BLOCK_SIZE
+            : MIN_BLOCK_SIZE
+
+        const response = await updateStatus(
           'Downloading alignments',
           statusCallback,
-          () => this.getLines(query, index, runLengthEncodeBases),
+          () => file.read(readLength, startBlock),
         )
+        const buffer = await unzip(response)
 
-        if (features && features.length > 0) {
+        const startOffset = firstEntry.virtualOffset.dataPosition
+        const nextOffset = nextEntry.virtualOffset.dataPosition
+        const endOffset =
+          endBlock === startBlock && nextOffset > startOffset
+            ? nextOffset
+            : buffer.length
+
+        const slice = buffer.slice(startOffset, endOffset)
+
+        // Stream features using generator - no caching, immediate GC eligible
+        for (const feat of this.parseTafBlocksStreaming(
+          slice,
+          runLengthEncodeBases,
+        )) {
           // Filter features that overlap with query region
-          for (const feat of features) {
-            if (feat.end > query.start && feat.start < query.end) {
-              observer.next(
-                new SimpleFeature({
-                  id: feat.uniqueId,
-                  data: {
-                    start: feat.start,
-                    end: feat.end,
-                    refName: query.refName,
-                    strand: feat.strand,
-                    alignments: feat.alignments,
-                    seq: feat.seq,
-                  },
-                }),
-              )
-            }
+          if (feat.end > query.start && feat.start < query.end) {
+            observer.next(
+              new SimpleFeature({
+                id: feat.uniqueId,
+                data: {
+                  start: feat.start,
+                  end: feat.end,
+                  refName: query.refName,
+                  strand: feat.strand,
+                  alignments: feat.alignments,
+                  seq: feat.seq,
+                },
+              }),
+            )
           }
         }
 
@@ -502,33 +481,6 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       samples: normalize(this.getConf('samples')),
       tree: nh ? parseNewick(nh) : undefined,
     }
-  }
-
-  async getLines(
-    query: Region,
-    byteRanges: IndexData,
-    runLengthEncodeBases: boolean,
-  ): Promise<TafFeature[] | undefined> {
-    const records = byteRanges[query.refName]
-    if (records && records.length > 0) {
-      const getKey = (r: (typeof records)[0]) => r.chrStart
-
-      const startIdx = lowerBound(records, query.start, getKey)
-      const firstEntry = records[Math.max(startIdx - 1, 0)]
-
-      const endIdx = lowerBound(records, query.end, getKey)
-      const nextEntry = records[endIdx + 1] ?? records.at(-1)
-
-      if (firstEntry && nextEntry) {
-        const cacheKey = `${firstEntry.virtualOffset}:${nextEntry.virtualOffset}`
-        return this.cache.get(cacheKey, {
-          nextEntry,
-          firstEntry,
-          runLengthEncodeBases,
-        }) as Promise<TafFeature[]>
-      }
-    }
-    return undefined
   }
 
   freeResources(): void {}
