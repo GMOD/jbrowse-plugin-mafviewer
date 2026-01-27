@@ -1,11 +1,5 @@
 import { measureText } from '@jbrowse/core/util'
 
-import {
-  CODE_GAP,
-  CODE_SPACE,
-  decodeBaseLower,
-  getBaseCode,
-} from '../../util/sequenceEncoding'
 import { fillRect } from '../util'
 import { addToSpatialIndex, shouldAddToSpatialIndex } from './spatialIndex'
 import {
@@ -21,12 +15,11 @@ import {
 } from './types'
 
 import type { RenderingContext } from './types'
-import type { EncodedSequence } from '../../util/sequenceEncoding'
 
 export function renderInsertions(
   context: RenderingContext,
-  alignment: EncodedSequence,
-  seq: EncodedSequence,
+  alignment: string,
+  seq: string,
   leftPx: number,
   rowTop: number,
   bpPerPx: number,
@@ -36,16 +29,12 @@ export function renderInsertions(
 ) {
   const { ctx, scale, h, canvasWidth, rowHeight, charHeight } = context
 
-  for (
-    let i = 0, genomicOffset = 0, seqLength = alignment.length;
-    i < seqLength;
-    i++
-  ) {
+  for (let i = 0, genomicOffset = 0, seqLength = alignment.length; i < seqLength; i++) {
     let insertionSequence = ''
-    while (getBaseCode(seq, i) === CODE_GAP) {
-      const alignCode = getBaseCode(alignment, i)
-      if (alignCode !== CODE_GAP && alignCode !== CODE_SPACE) {
-        insertionSequence += decodeBaseLower(alignment, i)
+    while (seq[i] === '-') {
+      const alignChar = alignment[i]!
+      if (alignChar !== '-' && alignChar !== ' ') {
+        insertionSequence += alignChar.toLowerCase()
       }
       i++
     }

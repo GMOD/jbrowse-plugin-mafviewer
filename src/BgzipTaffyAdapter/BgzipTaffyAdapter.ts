@@ -22,7 +22,6 @@ import {
   parseRowInstructions,
 } from './rowInstructions'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
-import { encodeSequence } from '../util/sequenceEncoding'
 
 import type { RowInstruction } from './rowInstructions'
 import type { IndexData, OrganismRecord } from './types'
@@ -54,7 +53,7 @@ interface TafFeature {
   end: number
   strand: number
   alignments: Record<string, OrganismRecord>
-  seq: ReturnType<typeof encodeSequence>
+  seq: string
 }
 
 // Binary search to find the index of the first element >= target
@@ -347,20 +346,19 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
 
     const row0 = block.rows[0]!
     const alignments: Record<string, OrganismRecord> = {}
-    let row0Seq: ReturnType<typeof encodeSequence> | undefined
+    let row0Seq: string | undefined
 
     for (const row of block.rows) {
       const { assemblyName, chr } = parseAssemblyAndChrSimple(row.sequenceName)
-      const seq = encodeSequence(row.bases)
       if (row === row0) {
-        row0Seq = seq
+        row0Seq = row.bases
       }
       alignments[assemblyName] = {
         chr,
         start: row.start,
         srcSize: row.sequenceLength,
         strand: row.strand,
-        seq,
+        seq: row.bases,
       }
     }
 

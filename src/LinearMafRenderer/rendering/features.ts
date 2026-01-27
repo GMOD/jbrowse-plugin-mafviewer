@@ -6,12 +6,7 @@ import { renderMatches } from './matches'
 import { renderMismatches } from './mismatches'
 import { renderText } from './text'
 
-import type {
-  AlignmentRecord,
-  EncodedSequence,
-  GenomicRegion,
-  RenderingContext,
-} from './types'
+import type { AlignmentRecord, GenomicRegion, RenderingContext } from './types'
 
 export function processFeatureAlignment(
   feature: Feature,
@@ -21,11 +16,8 @@ export function processFeatureAlignment(
   renderingContext: RenderingContext,
 ) {
   const [leftPx] = featureSpanPx(feature, region, bpPerPx)
-  const alignments = feature.get('alignments') as Record<
-    string,
-    AlignmentRecord
-  >
-  const referenceSeq = feature.get('seq') as EncodedSequence
+  const alignments = feature.get('alignments') as Record<string, AlignmentRecord>
+  const referenceSeq = feature.get('seq') as string
 
   for (const [sampleId, alignmentData] of Object.entries(alignments)) {
     const row = sampleToRowMap.get(sampleId)

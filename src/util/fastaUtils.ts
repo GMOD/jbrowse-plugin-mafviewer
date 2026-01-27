@@ -1,13 +1,5 @@
-import {
-  CODE_GAP,
-  CODE_SPACE,
-  decodeBaseLower,
-  getBaseCode,
-  getLowerCode,
-} from './sequenceEncoding'
 import { Sample } from '../LinearMafDisplay/types'
 
-import type { EncodedSequence } from './sequenceEncoding'
 import type { AlignmentRecord } from '../LinearMafRenderer/rendering'
 import type { Feature, Region } from '@jbrowse/core/util'
 
@@ -51,7 +43,7 @@ export function processFeaturesToFasta({
   for (const feature of features.values()) {
     const leftCoord = feature.get('start')
     const vals = feature.get('alignments') as Record<string, AlignmentRecord>
-    const seq = feature.get('seq') as EncodedSequence
+    const seq = feature.get('seq') as string
 
     for (const [sample, val] of Object.entries(vals)) {
       const alignment = val.seq
@@ -63,19 +55,19 @@ export function processFeaturesToFasta({
       const rowArray = outputRowsArrays[row]!
 
       for (let i = 0, o = 0, l = alignment.length; i < l; i++) {
-        const seqCode = getBaseCode(seq, i)
-        if (seqCode !== CODE_GAP) {
-          const alignCode = getBaseCode(alignment, i)
+        const seqChar = seq[i]!
+        if (seqChar !== '-') {
+          const alignChar = alignment[i]!
           const pos = leftCoord + o - region.start
 
           if (pos >= 0 && pos < rlen) {
-            if (alignCode === CODE_GAP) {
+            if (alignChar === '-') {
               rowArray[pos] = '-'
-            } else if (alignCode !== CODE_SPACE) {
-              const c = decodeBaseLower(alignment, i)
+            } else if (alignChar !== ' ') {
+              const c = alignChar.toLowerCase()
               if (showAllLetters) {
                 rowArray[pos] = c
-              } else if (getLowerCode(seqCode) === getLowerCode(alignCode)) {
+              } else if (seqChar.toLowerCase() === c) {
                 rowArray[pos] = '.'
               } else {
                 rowArray[pos] = c
@@ -85,11 +77,11 @@ export function processFeaturesToFasta({
           o++
         } else if (includeInsertions) {
           let insertionSequence = ''
-          while (i < alignment.length && getBaseCode(seq, i) === CODE_GAP) {
-            const alignCode = getBaseCode(alignment, i)
+          while (i < alignment.length && seq[i] === '-') {
+            const alignChar = alignment[i]!
             insertionSequence +=
-              alignCode !== CODE_GAP && alignCode !== CODE_SPACE
-                ? decodeBaseLower(alignment, i)
+              alignChar !== '-' && alignChar !== ' '
+                ? alignChar.toLowerCase()
                 : '-'
             i++
           }

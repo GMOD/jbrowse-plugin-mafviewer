@@ -7,9 +7,7 @@ import { getSnapshot } from '@jbrowse/mobx-state-tree'
 import parseNewick from '../parseNewick'
 import { normalize } from '../util'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
-import { encodeSequence } from '../util/sequenceEncoding'
 
-import type { EncodedSequence } from '../util/sequenceEncoding'
 import type { BaseOptions } from '@jbrowse/core/data_adapters/BaseAdapter'
 import type { Feature, Region } from '@jbrowse/core/util'
 
@@ -19,7 +17,7 @@ interface OrganismRecord {
   srcSize: number
   strand: number
   unknown: number
-  seq: EncodedSequence
+  seq: string
 }
 export default class BigMafAdapter extends BaseFeatureDataAdapter {
   public setupP?: Promise<{ adapter: BaseFeatureDataAdapter }>
@@ -70,7 +68,7 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
             const maf = feature.get('mafBlock') as string
             const blocks = maf.split(';')
             const alignments = {} as Record<string, OrganismRecord>
-            let referenceSeq: EncodedSequence | undefined
+            let referenceSeq: string | undefined
 
             for (const block of blocks) {
               if (block.startsWith('s')) {
@@ -78,12 +76,9 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
                 const sequence = parts[6]!
                 const organismChr = parts[1]!
 
-                // Encode immediately - original string can be GC'd
-                const encodedSeq = encodeSequence(sequence)
-
                 // Set reference sequence from first block
                 if (referenceSeq === undefined) {
-                  referenceSeq = encodedSeq
+                  referenceSeq = sequence
                 }
 
                 const { assemblyName: org, chr } =
@@ -95,7 +90,7 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
                   srcSize: +parts[3]!,
                   strand: parts[4] === '+' ? 1 : -1,
                   unknown: +parts[5]!,
-                  seq: encodedSeq,
+                  seq: sequence,
                 }
               }
             }

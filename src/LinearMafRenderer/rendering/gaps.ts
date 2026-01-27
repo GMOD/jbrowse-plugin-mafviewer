@@ -1,13 +1,11 @@
 import { GAP_STROKE_OFFSET } from './types'
-import { CODE_GAP, getBaseCode } from '../../util/sequenceEncoding'
 
 import type { RenderingContext } from './types'
-import type { EncodedSequence } from '../../util/sequenceEncoding'
 
 export function renderGaps(
   context: RenderingContext,
-  alignment: EncodedSequence,
-  seq: EncodedSequence,
+  alignment: string,
+  seq: string,
   leftPx: number,
   rowTop: number,
 ) {
@@ -17,13 +15,9 @@ export function renderGaps(
   ctx.beginPath()
   ctx.fillStyle = 'black'
 
-  for (
-    let i = 0, genomicOffset = 0, seqLength = alignment.length;
-    i < seqLength;
-    i++
-  ) {
-    if (getBaseCode(seq, i) !== CODE_GAP) {
-      if (getBaseCode(alignment, i) === CODE_GAP) {
+  for (let i = 0, genomicOffset = 0, seqLength = alignment.length; i < seqLength; i++) {
+    if (seq[i] !== '-') {
+      if (alignment[i] === '-') {
         const xPos = leftPx + scale * genomicOffset
         ctx.moveTo(xPos, rowTop + h2)
         ctx.lineTo(xPos + scale + GAP_STROKE_OFFSET, rowTop + h2)

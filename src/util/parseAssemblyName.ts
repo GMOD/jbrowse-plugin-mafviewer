@@ -71,20 +71,18 @@ export function parseAssemblyAndChrSimple(
   }
 }
 
-import type { EncodedSequence } from './sequenceEncoding'
-
 /**
  * Selects the appropriate sequence from alignments based on the lookup order:
  * 1. refAssemblyName config value (if provided)
  * 2. query.assemblyName (from the region being queried)
  * 3. firstAssemblyNameFound (fallback to first assembly in data)
  */
-export function selectReferenceSequence(
-  alignments: Record<string, { seq: EncodedSequence }>,
+export function selectReferenceSequenceString(
+  alignments: Record<string, { seq: string }>,
   refAssemblyName: string | undefined,
   queryAssemblyName: string | undefined,
   firstAssemblyNameFound: string | undefined,
-): EncodedSequence | undefined {
+): string | undefined {
   let entry
   if (refAssemblyName) {
     entry = alignments[refAssemblyName]

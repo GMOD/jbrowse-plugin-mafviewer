@@ -11,11 +11,8 @@ import parseNewick from '../parseNewick'
 import { normalize } from '../util'
 import {
   parseAssemblyAndChr,
-  selectReferenceSequence,
+  selectReferenceSequenceString,
 } from '../util/parseAssemblyName'
-import { encodeSequence } from '../util/sequenceEncoding'
-
-import type { EncodedSequence } from '../util/sequenceEncoding'
 
 interface OrganismRecord {
   chr: string
@@ -23,7 +20,7 @@ interface OrganismRecord {
   srcSize: number
   strand: number
   unknown: number
-  seq: EncodedSequence
+  seq: string
 }
 
 export default class MafTabixAdapter extends BaseFeatureDataAdapter {
@@ -114,7 +111,7 @@ export default class MafTabixAdapter extends BaseFeatureDataAdapter {
                   srcSize: +srcSizeStr!,
                   strand: strandStr === '-' ? -1 : 1,
                   unknown: +unknownStr!,
-                  seq: encodeSequence(seq),
+                  seq,
                 }
               }
             }
@@ -129,7 +126,7 @@ export default class MafTabixAdapter extends BaseFeatureDataAdapter {
                   name: feature.get('name'),
                   score: feature.get('score'),
                   alignments,
-                  seq: selectReferenceSequence(
+                  seq: selectReferenceSequenceString(
                     alignments,
                     refAssemblyName,
                     query.assemblyName,

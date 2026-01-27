@@ -1,24 +1,16 @@
-import {
-  CODE_GAP,
-  CODE_SPACE,
-  decodeBaseLower,
-  getBaseCode,
-  getLowerCode,
-} from '../../util/sequenceEncoding'
 import { fillRect } from '../util'
 import { addToSpatialIndex, shouldAddToSpatialIndex } from './spatialIndex'
 import { GAP_STROKE_OFFSET } from './types'
 
 import type { RenderingContext } from './types'
-import type { EncodedSequence } from '../../util/sequenceEncoding'
 
 /**
  * Renders colored rectangles for mismatches and matches (when showAllLetters is true)
  */
 export function renderMismatches(
   context: RenderingContext,
-  alignment: EncodedSequence,
-  seq: EncodedSequence,
+  alignment: string,
+  seq: string,
   leftPx: number,
   rowTop: number,
   rowIndex: number,
@@ -35,22 +27,15 @@ export function renderMismatches(
     colorForBase,
   } = context
 
-  for (
-    let i = 0, genomicOffset = 0, seqLength = alignment.length;
-    i < seqLength;
-    i++
-  ) {
-    const alignCode = getBaseCode(alignment, i)
-    const refCode = getBaseCode(seq, i)
-    if (refCode !== CODE_GAP) {
-      if (alignCode !== CODE_GAP) {
+  for (let i = 0, genomicOffset = 0, seqLength = alignment.length; i < seqLength; i++) {
+    const alignChar = alignment[i]!
+    const refChar = seq[i]!
+    if (refChar !== '-') {
+      if (alignChar !== '-') {
         const xPos = leftPx + scale * genomicOffset
-        if (
-          getLowerCode(refCode) !== getLowerCode(alignCode) &&
-          alignCode !== CODE_SPACE
-        ) {
+        const base = alignChar.toLowerCase()
+        if (refChar.toLowerCase() !== base && alignChar !== ' ') {
           // Mismatch
-          const base = decodeBaseLower(alignment, i)
           fillRect(
             ctx,
             xPos,
@@ -74,7 +59,6 @@ export function renderMismatches(
           }
         } else if (showAllLetters) {
           // Match (when showing all letters)
-          const base = decodeBaseLower(alignment, i)
           fillRect(
             ctx,
             xPos,
