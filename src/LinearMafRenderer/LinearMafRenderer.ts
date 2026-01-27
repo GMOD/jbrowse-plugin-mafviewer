@@ -1,13 +1,15 @@
+import { getAdapter } from '@jbrowse/core/data_adapters/dataAdapterCache'
 import { FeatureRendererType } from '@jbrowse/core/pluggableElementTypes'
 import { RenderArgsDeserialized } from '@jbrowse/core/pluggableElementTypes/renderers/BoxRendererType'
+import { Feature, Region, createCanvas } from '@jbrowse/core/util'
+
 import {
-  Region,
-  renderToAbstractCanvas,
-  updateStatus,
-} from '@jbrowse/core/util'
+  finalizeRendering,
+  initRenderingContext,
+  renderFeature,
+} from './makeImageData'
 
-import { makeImageData } from './makeImageData'
-
+import type { BaseFeatureDataAdapter } from '@jbrowse/core/data_adapters/BaseAdapter'
 import type { Sample } from '../LinearMafDisplay/types'
 
 interface RenderArgs extends RenderArgsDeserialized {
@@ -32,38 +34,74 @@ export default class LinearMafRenderer extends FeatureRendererType {
       end: Math.ceil(end + bpExpansion),
     }
   }
+
   async render(renderProps: RenderArgs) {
     const {
-      statusCallback = () => {},
       regions,
       bpPerPx,
       samples,
       rowHeight,
+      sessionId,
+      adapterConfig,
     } = renderProps
     const region = regions[0]!
     const height = samples.length * rowHeight + 100
     const width = (region.end - region.start) / bpPerPx
-    const features = await this.getFeatures(renderProps)
-    const res = await updateStatus('Rendering alignment', statusCallback, () =>
-      renderToAbstractCanvas(width, height, renderProps, ctx => {
-        return makeImageData({
-          ctx,
-          renderArgs: {
-            ...renderProps,
-            features,
-          },
-        })
-      }),
+
+    // Create canvas and initialize rendering context
+    const canvas = createCanvas(Math.ceil(width), height)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      throw new Error('Could not get canvas context')
+    }
+
+    const { renderingContext, sampleToRowMap, region: expandedRegion } =
+      initRenderingContext(ctx, renderProps)
+
+    // Get adapter and stream features directly to canvas
+    // This renders each feature as it arrives, reducing peak memory
+    const { dataAdapter } = await getAdapter(
+      this.pluginManager,
+      sessionId,
+      adapterConfig,
     )
+    const adapter = dataAdapter as BaseFeatureDataAdapter
+    const queryRegion = this.getExpandedRegion(region)
+
+    await new Promise<void>((resolve, reject) => {
+      adapter.getFeatures(queryRegion, renderProps).subscribe({
+        next: (feature: Feature) => {
+          if (this.featurePassesFilters(renderProps, feature)) {
+            // Render directly to canvas as features stream in
+            renderFeature(
+              feature,
+              expandedRegion,
+              bpPerPx,
+              sampleToRowMap,
+              renderingContext,
+            )
+          }
+        },
+        error: reject,
+        complete: resolve,
+      })
+    })
+
+    // Finalize rendering and build spatial index
+    const { flatbush, items } = finalizeRendering(renderingContext, samples)
+
     const results = await super.render({
       ...renderProps,
-      ...res,
       width,
       height,
     })
+
     return {
       ...results,
-      ...res,
+      imageData: ctx.getImageData(0, 0, Math.ceil(width), height),
+      flatbush,
+      items,
+      samples,
       features: new Map(),
       width,
       height,

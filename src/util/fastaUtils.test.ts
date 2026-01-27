@@ -2,6 +2,7 @@ import { Feature, SimpleFeature } from '@jbrowse/core/util'
 import { expect, test } from 'vitest'
 
 import { processFeaturesToFasta } from './fastaUtils'
+import { encodeSequence } from './sequenceEncoding'
 
 function makeMap(features: Feature[]) {
   return new Map(features.map(f => [f.id(), f]))
@@ -11,18 +12,18 @@ const mockFeature = new SimpleFeature({
   refName: 'abc',
   start: 100,
   end: 110,
-  seq: 'ACGTACGTAC',
+  seq: encodeSequence('ACGTACGTAC'),
   alignments: {
     assembly1: {
       chr: 'chr1',
       start: 100,
-      seq: 'ACGTACGTAC',
+      seq: encodeSequence('ACGTACGTAC'),
       strand: 1,
     },
     assembly2: {
       chr: 'chr2',
       start: 200,
-      seq: 'AC-TTCGTAC',
+      seq: encodeSequence('AC-TTCGTAC'),
       strand: 1,
     },
   },
@@ -66,18 +67,18 @@ test('gap in assembly1', () => {
     refName: 'abc',
     start: 100,
     end: 110,
-    seq: 'AC-TACGTAC',
+    seq: encodeSequence('AC-TACGTAC'),
     alignments: {
       assembly1: {
         chr: 'chr1',
         start: 100,
-        seq: 'AC-TACGTAC',
+        seq: encodeSequence('AC-TACGTAC'),
         strand: 1,
       },
       assembly2: {
         chr: 'chr2',
         start: 200,
-        seq: 'ACGTTCGTAC',
+        seq: encodeSequence('ACGTTCGTAC'),
         strand: 1,
       },
     },
@@ -108,18 +109,18 @@ test('includeInsertions - single insertion in one sample', () => {
     refName: 'abc',
     start: 100,
     end: 106, // 6 bp reference (AC GTAC without the gap)
-    seq: 'AC--GTAC',
+    seq: encodeSequence('AC--GTAC'),
     alignments: {
       assembly1: {
         chr: 'chr1',
         start: 100,
-        seq: 'AC--GTAC',
+        seq: encodeSequence('AC--GTAC'),
         strand: 1,
       },
       assembly2: {
         chr: 'chr2',
         start: 200,
-        seq: 'ACTTGTAC',
+        seq: encodeSequence('ACTTGTAC'),
         strand: 1,
       },
     },
@@ -154,18 +155,18 @@ test('includeInsertions - insertions in multiple samples with different lengths'
     refName: 'abc',
     start: 100,
     end: 106,
-    seq: 'AC---GTAC',
+    seq: encodeSequence('AC---GTAC'),
     alignments: {
       assembly1: {
         chr: 'chr1',
         start: 100,
-        seq: 'AC-T-GTAC',
+        seq: encodeSequence('AC-T-GTAC'),
         strand: 1,
       },
       assembly2: {
         chr: 'chr2',
         start: 200,
-        seq: 'ACTTTGTAC',
+        seq: encodeSequence('ACTTTGTAC'),
         strand: 1,
       },
     },
@@ -200,18 +201,18 @@ test('includeInsertions - insertions at multiple positions', () => {
     refName: 'abc',
     start: 100,
     end: 106,
-    seq: 'A-CG-TAC',
+    seq: encodeSequence('A-CG-TAC'),
     alignments: {
       assembly1: {
         chr: 'chr1',
         start: 100,
-        seq: 'ATCGGTAC',
+        seq: encodeSequence('ATCGGTAC'),
         strand: 1,
       },
       assembly2: {
         chr: 'chr2',
         start: 200,
-        seq: 'A-CG-TAC',
+        seq: encodeSequence('A-CG-TAC'),
         strand: 1,
       },
     },
@@ -240,18 +241,18 @@ test('includeInsertions=false ignores insertions', () => {
     refName: 'abc',
     start: 100,
     end: 106,
-    seq: 'AC--GTAC',
+    seq: encodeSequence('AC--GTAC'),
     alignments: {
       assembly1: {
         chr: 'chr1',
         start: 100,
-        seq: 'AC--GTAC',
+        seq: encodeSequence('AC--GTAC'),
         strand: 1,
       },
       assembly2: {
         chr: 'chr2',
         start: 200,
-        seq: 'ACTTGTAC',
+        seq: encodeSequence('ACTTGTAC'),
         strand: 1,
       },
     },
