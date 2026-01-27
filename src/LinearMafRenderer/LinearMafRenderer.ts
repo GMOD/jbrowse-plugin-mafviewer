@@ -1,7 +1,12 @@
 import { getAdapter } from '@jbrowse/core/data_adapters/dataAdapterCache'
 import { FeatureRendererType } from '@jbrowse/core/pluggableElementTypes'
 import { RenderArgsDeserialized } from '@jbrowse/core/pluggableElementTypes/renderers/BoxRendererType'
-import { Feature, Region, createCanvas } from '@jbrowse/core/util'
+import {
+  Feature,
+  Region,
+  createCanvas,
+  createImageBitmap,
+} from '@jbrowse/core/util'
 
 import {
   finalizeRendering,
@@ -20,6 +25,7 @@ interface RenderArgs extends RenderArgsDeserialized {
   mismatchRendering: boolean
   statusCallback?: (arg: string) => void
   showAsUpperCase: boolean
+  highResolutionScaling?: number
 }
 
 export default class LinearMafRenderer extends FeatureRendererType {
@@ -43,16 +49,25 @@ export default class LinearMafRenderer extends FeatureRendererType {
       rowHeight,
       sessionId,
       adapterConfig,
+      highResolutionScaling = 1,
     } = renderProps
     const region = regions[0]!
     const height = samples.length * rowHeight + 100
     const width = (region.end - region.start) / bpPerPx
 
-    // Create canvas and initialize rendering context
-    const canvas = createCanvas(Math.ceil(width), height)
+    // Create canvas with high resolution scaling support
+    const canvas = createCanvas(
+      Math.ceil(width * highResolutionScaling),
+      Math.ceil(height * highResolutionScaling),
+    )
     const ctx = canvas.getContext('2d')
     if (!ctx) {
       throw new Error('Could not get canvas context')
+    }
+
+    // Scale context for high resolution displays
+    if (highResolutionScaling !== 1) {
+      ctx.scale(highResolutionScaling, highResolutionScaling)
     }
 
     const { renderingContext, sampleToRowMap, region: expandedRegion } =
@@ -90,15 +105,12 @@ export default class LinearMafRenderer extends FeatureRendererType {
     // Finalize rendering and build spatial index
     const { flatbush, items } = finalizeRendering(renderingContext, samples)
 
-    const results = await super.render({
-      ...renderProps,
-      width,
-      height,
-    })
-
+    // Note: We intentionally skip calling super.render() here because:
+    // 1. FeatureRendererType.render() would call getFeatures() again with toArray()
+    // 2. We've already rendered directly to canvas via streaming
+    // 3. Canvas-based renderers return imageData directly, not React elements
     return {
-      ...results,
-      imageData: ctx.getImageData(0, 0, Math.ceil(width), height),
+      imageData: await createImageBitmap(canvas),
       flatbush,
       items,
       samples,

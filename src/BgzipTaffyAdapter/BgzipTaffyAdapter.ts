@@ -346,13 +346,9 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
 
     const row0 = block.rows[0]!
     const alignments: Record<string, OrganismRecord> = {}
-    let row0Seq: string | undefined
 
     for (const row of block.rows) {
       const { assemblyName, chr } = parseAssemblyAndChrSimple(row.sequenceName)
-      if (row === row0) {
-        row0Seq = row.bases
-      }
       alignments[assemblyName] = {
         chr,
         start: row.start,
@@ -368,7 +364,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       end: row0.start + row0.length,
       strand: row0.strand,
       alignments,
-      seq: row0Seq!,
+      seq: row0.bases,
     }
   }
 
