@@ -17,6 +17,8 @@
     "clean": "rimraf dist",
     "start": "node esbuild.mjs --watch",
     "test": "vitest",
+    "bench": "vitest bench",
+    "bench:memory": "node --expose-gc --experimental-strip-types src/BigMafAdapter/memoryBenchmark.ts",
     "format": "prettier --write .",
     "prebuild": "yarn clean",
     "build": "tsc && NODE_ENV=production node esbuild.mjs",

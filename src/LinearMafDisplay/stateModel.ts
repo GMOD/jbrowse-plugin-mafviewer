@@ -536,7 +536,7 @@ export default function stateModelFactory(
               type: 'subMenu',
               subMenu: [
                 {
-                  label: 'All letters',
+                  label: 'Letters at all positions',
                   type: 'checkbox',
                   checked: self.showAllLetters,
                   onClick: () => {
@@ -544,7 +544,7 @@ export default function stateModelFactory(
                   },
                 },
                 {
-                  label: 'Individual mismatch colors',
+                  label: 'Mismatches colored by base',
                   type: 'checkbox',
                   checked: self.mismatchRendering,
                   onClick: () => {
@@ -552,7 +552,7 @@ export default function stateModelFactory(
                   },
                 },
                 {
-                  label: 'Uppercase letters',
+                  label: 'Letters as uppercase',
                   type: 'checkbox',
                   checked: self.showAsUpperCase,
                   onClick: () => {
@@ -560,7 +560,7 @@ export default function stateModelFactory(
                   },
                 },
                 {
-                  label: 'Sidebar',
+                  label: 'Sidebar with tree and labels',
                   type: 'checkbox',
                   checked: self.showSidebar,
                   onClick: () => {
