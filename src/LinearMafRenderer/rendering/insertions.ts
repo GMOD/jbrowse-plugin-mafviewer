@@ -29,7 +29,11 @@ export function renderInsertions(
 ) {
   const { ctx, scale, h, canvasWidth, rowHeight, charHeight } = context
 
-  for (let i = 0, genomicOffset = 0, seqLength = alignment.length; i < seqLength; i++) {
+  for (
+    let i = 0, genomicOffset = 0, seqLength = alignment.length;
+    i < seqLength;
+    i++
+  ) {
     let insertionSequence = ''
     while (seq[i] === '-') {
       const alignChar = alignment[i]!

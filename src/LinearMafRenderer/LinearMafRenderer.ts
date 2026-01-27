@@ -1,7 +1,12 @@
 import { getAdapter } from '@jbrowse/core/data_adapters/dataAdapterCache'
 import { FeatureRendererType } from '@jbrowse/core/pluggableElementTypes'
 import { RenderArgsDeserialized } from '@jbrowse/core/pluggableElementTypes/renderers/BoxRendererType'
-import { Feature, Region, createCanvas, createImageBitmap } from '@jbrowse/core/util'
+import {
+  Feature,
+  Region,
+  createCanvas,
+  createImageBitmap,
+} from '@jbrowse/core/util'
 
 import {
   finalizeRendering,
@@ -66,8 +71,11 @@ export default class LinearMafRenderer extends FeatureRendererType {
       ctx.scale(highResolutionScaling, highResolutionScaling)
     }
 
-    const { renderingContext, sampleToRowMap, region: expandedRegion } =
-      initRenderingContext(ctx, renderProps)
+    const {
+      renderingContext,
+      sampleToRowMap,
+      region: expandedRegion,
+    } = initRenderingContext(ctx, renderProps)
 
     // Get adapter and stream features directly to canvas
     // This renders each feature as it arrives, reducing peak memory

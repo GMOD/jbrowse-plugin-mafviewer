@@ -689,9 +689,8 @@ describe('BgzipTaffyAdapter integration tests', () => {
           locationType: 'LocalPathLocation',
         },
         taiLocation: {
-          localPath: require.resolve(
-            '../../test_data/celegans/chrI.taf.gz.tai',
-          ),
+          localPath:
+            require.resolve('../../test_data/celegans/chrI.taf.gz.tai'),
           locationType: 'LocalPathLocation',
         },
         nhLocation: {
@@ -726,9 +725,8 @@ describe('BgzipTaffyAdapter integration tests', () => {
           locationType: 'LocalPathLocation',
         },
         taiLocation: {
-          localPath: require.resolve(
-            '../../test_data/celegans/chrI.taf.gz.tai',
-          ),
+          localPath:
+            require.resolve('../../test_data/celegans/chrI.taf.gz.tai'),
           locationType: 'LocalPathLocation',
         },
       }),
@@ -746,9 +744,8 @@ describe('BgzipTaffyAdapter integration tests', () => {
           locationType: 'LocalPathLocation',
         },
         taiLocation: {
-          localPath: require.resolve(
-            '../../test_data/celegans/chrI.taf.gz.tai',
-          ),
+          localPath:
+            require.resolve('../../test_data/celegans/chrI.taf.gz.tai'),
           locationType: 'LocalPathLocation',
         },
         nhLocation: {
@@ -776,9 +773,8 @@ describe('BgzipTaffyAdapter integration tests', () => {
           locationType: 'LocalPathLocation',
         },
         taiLocation: {
-          localPath: require.resolve(
-            '../../test_data/celegans/chrI.taf.gz.tai',
-          ),
+          localPath:
+            require.resolve('../../test_data/celegans/chrI.taf.gz.tai'),
           locationType: 'LocalPathLocation',
         },
       }),
@@ -809,9 +805,8 @@ describe('BgzipTaffyAdapter integration tests', () => {
           locationType: 'LocalPathLocation',
         },
         taiLocation: {
-          localPath: require.resolve(
-            '../../test_data/celegans/chrI.taf.gz.tai',
-          ),
+          localPath:
+            require.resolve('../../test_data/celegans/chrI.taf.gz.tai'),
           locationType: 'LocalPathLocation',
         },
       }),
@@ -836,9 +831,8 @@ describe('BgzipTaffyAdapter integration tests', () => {
           locationType: 'LocalPathLocation',
         },
         taiLocation: {
-          localPath: require.resolve(
-            '../../test_data/evolverMammals.taf.gz.tai',
-          ),
+          localPath:
+            require.resolve('../../test_data/evolverMammals.taf.gz.tai'),
           locationType: 'LocalPathLocation',
         },
       }),
@@ -870,9 +864,8 @@ describe('BgzipTaffyAdapter integration tests', () => {
           locationType: 'LocalPathLocation',
         },
         taiLocation: {
-          localPath: require.resolve(
-            '../../test_data/celegans/chrI.taf.gz.tai',
-          ),
+          localPath:
+            require.resolve('../../test_data/celegans/chrI.taf.gz.tai'),
           locationType: 'LocalPathLocation',
         },
       }),

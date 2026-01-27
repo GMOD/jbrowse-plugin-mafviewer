@@ -13,6 +13,7 @@ export default tseslint.config(
       'example/*',
       'eslint.config.mjs',
       'esbuild.mjs',
+      'benchmarks/*',
     ],
   },
   {

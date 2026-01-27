@@ -27,7 +27,11 @@ export function renderMismatches(
     colorForBase,
   } = context
 
-  for (let i = 0, genomicOffset = 0, seqLength = alignment.length; i < seqLength; i++) {
+  for (
+    let i = 0, genomicOffset = 0, seqLength = alignment.length;
+    i < seqLength;
+    i++
+  ) {
     const alignChar = alignment[i]!
     const refChar = seq[i]!
     if (refChar !== '-') {

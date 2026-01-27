@@ -5,18 +5,16 @@
  * vs collecting all features into an array before processing.
  *
  * Run with:
- *   yarn bench:memory
- *   # or directly:
- *   node --expose-gc --experimental-strip-types src/BigMafAdapter/memoryBenchmark.ts
+ *   node --expose-gc --experimental-strip-types benchmarks/memoryBenchmark.ts
  *
  * The --expose-gc flag enables manual garbage collection for accurate measurements.
  */
 
 // Configuration - adjust these to test different scenarios
 const CONFIG = {
-  numFeatures: 100,    // Number of MAF alignment blocks
-  numOrganisms: 200,   // Number of species/organisms per block
-  seqLength: 10000,    // Sequence length in base pairs
+  numFeatures: 100, // Number of MAF alignment blocks
+  numOrganisms: 200, // Number of species/organisms per block
+  seqLength: 10000, // Sequence length in base pairs
 }
 
 // Parse command line args for custom config
@@ -34,8 +32,19 @@ for (let i = 2; i < process.argv.length; i++) {
 // Generate organism names
 function generateOrgNames(count: number): string[] {
   const baseOrgs = [
-    'hg38', 'mm10', 'rn6', 'canFam3', 'felCat8', 'bosTau8', 'oviAri3',
-    'susScr11', 'equCab2', 'galGal5', 'danRer10', 'xenTro9', 'latCha1',
+    'hg38',
+    'mm10',
+    'rn6',
+    'canFam3',
+    'felCat8',
+    'bosTau8',
+    'oviAri3',
+    'susScr11',
+    'equCab2',
+    'galGal5',
+    'danRer10',
+    'xenTro9',
+    'latCha1',
   ]
   const orgs: string[] = []
   for (let i = 0; i < count; i++) {
@@ -60,7 +69,10 @@ function generateFeature(
 ): SimulatedFeature {
   const orgs = generateOrgNames(numOrganisms)
   const bases = ['A', 'C', 'G', 'T', '-']
-  const alignments: Record<string, { chr: string; start: number; seq: string }> = {}
+  const alignments: Record<
+    string,
+    { chr: string; start: number; seq: string }
+  > = {}
 
   const refSeq = Array.from(
     { length: seqLength },
@@ -103,13 +115,13 @@ function processFeature(feature: SimulatedFeature): number {
 }
 
 function forceGC(): void {
-  if (typeof global !== 'undefined' && (global as any).gc) {
-    ;(global as any).gc()
+  if ((globalThis as Record<string, unknown>).gc) {
+    ;(globalThis as Record<string, unknown>).gc?.()
   }
 }
 
 function getMemoryMB(): number {
-  return Math.round(process.memoryUsage().heapUsed / 1024 / 1024 * 100) / 100
+  return Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 100) / 100
 }
 
 function formatMemory(mb: number): string {
@@ -133,13 +145,19 @@ async function runMemoryBenchmark() {
   console.log(`  Seq Length: ${seqLength} bp`)
   console.log('')
   console.log('This simulates the MAF viewer rendering pipeline:')
-  console.log('  - Non-streaming: collect all features, then render (old approach)')
-  console.log('  - Streaming: render each feature as it arrives (current approach)')
+  console.log(
+    '  - Non-streaming: collect all features, then render (old approach)',
+  )
+  console.log(
+    '  - Streaming: render each feature as it arrives (current approach)',
+  )
   console.log('')
 
   // Check if GC is available
-  if (typeof (global as any).gc !== 'function') {
-    console.log('WARNING: Run with --expose-gc for accurate memory measurements')
+  if (typeof (globalThis as Record<string, unknown>).gc !== 'function') {
+    console.log(
+      'WARNING: Run with --expose-gc for accurate memory measurements',
+    )
     console.log('')
   }
 
@@ -186,7 +204,9 @@ async function runMemoryBenchmark() {
   console.log(`  Baseline:     ${formatMemory(baselineNonStream)}`)
   console.log(`  Peak:         ${formatMemory(peakMemoryNonStream)}`)
   console.log(`  Final:        ${formatMemory(finalMemNonStream)}`)
-  console.log(`  Time:         ${formatTime(endTimeNonStream - startTimeNonStream)}`)
+  console.log(
+    `  Time:         ${formatTime(endTimeNonStream - startTimeNonStream)}`,
+  )
   console.log('')
 
   // Clear and GC
@@ -244,36 +264,57 @@ async function runMemoryBenchmark() {
   console.log('='.repeat(70))
   console.log('')
 
-  const memoryReduction = ((peakMemoryNonStream - peakMemoryStream) / peakMemoryNonStream * 100)
-  const timeDiff = (endTimeStream - startTimeStream) - (endTimeNonStream - startTimeNonStream)
-  const timeRatio = (endTimeNonStream - startTimeNonStream) / (endTimeStream - startTimeStream)
+  const memoryReduction =
+    ((peakMemoryNonStream - peakMemoryStream) / peakMemoryNonStream) * 100
+  const timeDiff =
+    endTimeStream - startTimeStream - (endTimeNonStream - startTimeNonStream)
+  const timeRatio =
+    (endTimeNonStream - startTimeNonStream) / (endTimeStream - startTimeStream)
 
   console.log('Peak Memory:')
   console.log(`  Non-streaming: ${formatMemory(peakMemoryNonStream)}`)
   console.log(`  Streaming:     ${formatMemory(peakMemoryStream)}`)
   if (memoryReduction > 0) {
-    console.log(`  Reduction:     ${memoryReduction.toFixed(1)}% less memory with streaming`)
+    console.log(
+      `  Reduction:     ${memoryReduction.toFixed(1)}% less memory with streaming`,
+    )
   }
   console.log('')
 
   console.log('Execution Time:')
-  console.log(`  Non-streaming: ${formatTime(endTimeNonStream - startTimeNonStream)}`)
+  console.log(
+    `  Non-streaming: ${formatTime(endTimeNonStream - startTimeNonStream)}`,
+  )
   console.log(`  Streaming:     ${formatTime(endTimeStream - startTimeStream)}`)
-  console.log(`  Difference:    ${timeDiff > 0 ? '+' : ''}${formatTime(timeDiff)}`)
+  console.log(
+    `  Difference:    ${timeDiff > 0 ? '+' : ''}${formatTime(timeDiff)}`,
+  )
   console.log('')
 
   console.log('Conclusion:')
   if (memoryReduction > 10) {
-    console.log(`  ✓ Streaming reduces peak memory by ${memoryReduction.toFixed(0)}%`)
-    console.log(`  ✓ This is significant for large MAF files with many organisms`)
+    console.log(
+      `  ✓ Streaming reduces peak memory by ${memoryReduction.toFixed(0)}%`,
+    )
+    console.log(
+      `  ✓ This is significant for large MAF files with many organisms`,
+    )
     if (timeRatio < 1) {
-      console.log(`  ✓ Streaming is also ${((1/timeRatio - 1) * 100).toFixed(0)}% faster`)
+      console.log(
+        `  ✓ Streaming is also ${((1 / timeRatio - 1) * 100).toFixed(0)}% faster`,
+      )
     } else if (timeRatio > 1.1) {
-      console.log(`  ! Streaming is ${((timeRatio - 1) * 100).toFixed(0)}% slower (GC overhead)`)
-      console.log(`    This tradeoff is worthwhile for memory-constrained scenarios`)
+      console.log(
+        `  ! Streaming is ${((timeRatio - 1) * 100).toFixed(0)}% slower (GC overhead)`,
+      )
+      console.log(
+        `    This tradeoff is worthwhile for memory-constrained scenarios`,
+      )
     }
   } else {
-    console.log(`  Memory difference is minimal (${memoryReduction.toFixed(1)}%)`)
+    console.log(
+      `  Memory difference is minimal (${memoryReduction.toFixed(1)}%)`,
+    )
     console.log(`  Run with --expose-gc for accurate measurements`)
   }
   console.log('')

@@ -15,7 +15,11 @@ export function renderGaps(
   ctx.beginPath()
   ctx.fillStyle = 'black'
 
-  for (let i = 0, genomicOffset = 0, seqLength = alignment.length; i < seqLength; i++) {
+  for (
+    let i = 0, genomicOffset = 0, seqLength = alignment.length;
+    i < seqLength;
+    i++
+  ) {
     if (seq[i] !== '-') {
       if (alignment[i] === '-') {
         const xPos = leftPx + scale * genomicOffset

@@ -98,7 +98,13 @@ export function renderFeature(
   sampleToRowMap: Map<string, number>,
   renderingContext: RenderingContext,
 ) {
-  processFeatureAlignment(feature, region, bpPerPx, sampleToRowMap, renderingContext)
+  processFeatureAlignment(
+    feature,
+    region,
+    bpPerPx,
+    sampleToRowMap,
+    renderingContext,
+  )
 }
 
 /**

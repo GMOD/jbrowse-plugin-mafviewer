@@ -155,9 +155,9 @@ describe('parseAssemblyAndChrSimple (BigMaf format)', () => {
 })
 
 describe('selectReferenceSequenceString', () => {
-  const hg38Seq = ('ACGTACGT')
-  const mm10Seq = ('TGCATGCA')
-  const panTro6Seq = ('GGGGGGGG')
+  const hg38Seq = 'ACGTACGT'
+  const mm10Seq = 'TGCATGCA'
+  const panTro6Seq = 'GGGGGGGG'
   const alignments = {
     hg38: { seq: hg38Seq },
     mm10: { seq: mm10Seq },
@@ -175,7 +175,12 @@ describe('selectReferenceSequenceString', () => {
   })
 
   test('falls back to queryAssemblyName when refAssemblyName is empty', () => {
-    const result = selectReferenceSequenceString(alignments, '', 'hg38', 'panTro6')
+    const result = selectReferenceSequenceString(
+      alignments,
+      '',
+      'hg38',
+      'panTro6',
+    )
     expect(result).toBe(hg38Seq)
   })
 
@@ -252,19 +257,24 @@ describe('selectReferenceSequenceString', () => {
 
 describe('assembly name lookup integration scenarios', () => {
   test('refAssemblyName config takes precedence over query.assemblyName', () => {
-    const refSeq = ('REFERENCE_SEQ')
-    const querySeq = ('QUERY_SEQ')
+    const refSeq = 'REFERENCE_SEQ'
+    const querySeq = 'QUERY_SEQ'
     const alignments = {
       hg38: { seq: refSeq },
       mm10: { seq: querySeq },
     }
-    const result = selectReferenceSequenceString(alignments, 'hg38', 'mm10', 'mm10')
+    const result = selectReferenceSequenceString(
+      alignments,
+      'hg38',
+      'mm10',
+      'mm10',
+    )
     expect(result).toBe(refSeq)
   })
 
   test('query.assemblyName works when refAssemblyName not configured', () => {
-    const querySeq = ('QUERY_SEQ')
-    const otherSeq = ('OTHER_SEQ')
+    const querySeq = 'QUERY_SEQ'
+    const otherSeq = 'OTHER_SEQ'
     const alignments = {
       hg38: { seq: querySeq },
       mm10: { seq: otherSeq },
@@ -274,13 +284,18 @@ describe('assembly name lookup integration scenarios', () => {
   })
 
   test('firstAssemblyNameFound is used as last resort fallback', () => {
-    const firstSeq = ('FIRST_FOUND')
-    const otherSeq = ('OTHER_SEQ')
+    const firstSeq = 'FIRST_FOUND'
+    const otherSeq = 'OTHER_SEQ'
     const alignments = {
       panTro6: { seq: firstSeq },
       mm10: { seq: otherSeq },
     }
-    const result = selectReferenceSequenceString(alignments, '', 'hg38', 'panTro6')
+    const result = selectReferenceSequenceString(
+      alignments,
+      '',
+      'hg38',
+      'panTro6',
+    )
     expect(result).toBe(firstSeq)
   })
 })
@@ -319,8 +334,8 @@ describe('real-world MAF format parsing', () => {
   })
 
   test('multiple assemblies from same MAF block produce correct lookup', () => {
-    const ce10Seq = ('TCTTTTAGTATTTGTAA')
-    const caePb3Seq = ('tcTTTTCGC-TTTATAA')
+    const ce10Seq = 'TCTTTTAGTATTTGTAA'
+    const caePb3Seq = 'tcTTTTCGC-TTTATAA'
     const alignments = {
       ce10: { seq: ce10Seq },
       caePb3: { seq: caePb3Seq },
@@ -332,9 +347,9 @@ describe('real-world MAF format parsing', () => {
     )
 
     // When refAssemblyName is configured to override
-    expect(selectReferenceSequenceString(alignments, 'caePb3', 'ce10', 'ce10')).toBe(
-      caePb3Seq,
-    )
+    expect(
+      selectReferenceSequenceString(alignments, 'caePb3', 'ce10', 'ce10'),
+    ).toBe(caePb3Seq)
   })
 })
 

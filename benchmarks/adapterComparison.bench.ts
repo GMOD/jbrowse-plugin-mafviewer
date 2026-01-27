@@ -2,15 +2,15 @@
  * Benchmark comparing all three MAF adapter implementations using indexed queries
  *
  * Run with:
- *   node --expose-gc --experimental-strip-types src/adapterComparison.bench.ts
+ *   node --expose-gc --experimental-strip-types benchmarks/adapterComparison.bench.ts
  *
  * Tests both:
  * - C. elegans 7-way alignment (small organism count)
  * - Zoonomia 447-way alignment (large organism count)
  */
 
-import { unzip } from '@gmod/bgzf-filehandle'
 import { BigBed } from '@gmod/bbi'
+import { unzip } from '@gmod/bgzf-filehandle'
 import { LocalFile } from 'generic-filehandle2'
 
 // Test datasets
@@ -47,15 +47,25 @@ const DATASETS: Record<string, Dataset> = {
     mafTabix: null,
     regions: [
       { name: 'small (1kb)', refName: 'chr22', start: 22000000, end: 22001000 },
-      { name: 'medium (10kb)', refName: 'chr22', start: 22000000, end: 22010000 },
-      { name: 'large (100kb)', refName: 'chr22', start: 22000000, end: 22100000 },
+      {
+        name: 'medium (10kb)',
+        refName: 'chr22',
+        start: 22000000,
+        end: 22010000,
+      },
+      {
+        name: 'large (100kb)',
+        refName: 'chr22',
+        start: 22000000,
+        end: 22100000,
+      },
     ],
   },
 }
 
 function forceGC(): void {
-  if (typeof global !== 'undefined' && (global as any).gc) {
-    ;(global as any).gc()
+  if ((globalThis as Record<string, unknown>).gc) {
+    ;(globalThis as Record<string, unknown>).gc?.()
   }
 }
 
@@ -91,17 +101,25 @@ async function benchmarkBigMaf(
   const bb = new BigBed({ filehandle: file })
 
   const currentMem1 = getMemoryMB()
-  if (currentMem1 > peakMem) peakMem = currentMem1
+  if (currentMem1 > peakMem) {
+    peakMem = currentMem1
+  }
 
-  const features = await bb.getFeatures(region.refName, region.start, region.end)
+  const features = await bb.getFeatures(
+    region.refName,
+    region.start,
+    region.end,
+  )
 
   const currentMem2 = getMemoryMB()
-  if (currentMem2 > peakMem) peakMem = currentMem2
+  if (currentMem2 > peakMem) {
+    peakMem = currentMem2
+  }
 
   let count = 0
   for (const feature of features) {
     count++
-    const mafBlock = (feature as any).mafBlock as string | undefined
+    const mafBlock = feature.mafBlock as string | undefined
     if (mafBlock) {
       const blocks = mafBlock.split(';')
       for (const block of blocks) {
@@ -112,7 +130,9 @@ async function benchmarkBigMaf(
       }
     }
     const currentMem = getMemoryMB()
-    if (currentMem > peakMem) peakMem = currentMem
+    if (currentMem > peakMem) {
+      peakMem = currentMem
+    }
   }
 
   const endTime = performance.now()
@@ -153,7 +173,9 @@ async function readTaiIndex(path: string): Promise<Map<string, TaiEntry[]>> {
     const currChr = isRelative ? lastChr : chr!.split('.').at(-1)!
 
     const absOffset = isRelative ? lastRawOffset + +offsetStr! : +offsetStr!
-    const absChrStart = isRelative ? lastChrStart + +chrStartStr! : +chrStartStr!
+    const absChrStart = isRelative
+      ? lastChrStart + +chrStartStr!
+      : +chrStartStr!
 
     const blockPosition = Math.floor(absOffset / 65536)
     const dataPosition = absOffset % 65536
@@ -161,7 +183,9 @@ async function readTaiIndex(path: string): Promise<Map<string, TaiEntry[]>> {
     if (!index.has(currChr)) {
       index.set(currChr, [])
     }
-    index.get(currChr)!.push({ chrStart: absChrStart, blockPosition, dataPosition })
+    index
+      .get(currChr)!
+      .push({ chrStart: absChrStart, blockPosition, dataPosition })
 
     lastChr = currChr
     lastChrStart = absChrStart
@@ -218,17 +242,22 @@ async function benchmarkTaffy(
   const file = new LocalFile(`${dataset.dir}/${dataset.taf}`)
   const startBlock = firstEntry.blockPosition
   const endBlock = nextEntry.blockPosition
-  const readLength = endBlock > startBlock ? endBlock - startBlock + 65536 : 65536
+  const readLength =
+    endBlock > startBlock ? endBlock - startBlock + 65536 : 65536
 
   const compressedData = await file.read(readLength, startBlock)
 
   const currentMem1 = getMemoryMB()
-  if (currentMem1 > peakMem) peakMem = currentMem1
+  if (currentMem1 > peakMem) {
+    peakMem = currentMem1
+  }
 
   const buffer = await unzip(compressedData)
 
   const currentMem2 = getMemoryMB()
-  if (currentMem2 > peakMem) peakMem = currentMem2
+  if (currentMem2 > peakMem) {
+    peakMem = currentMem2
+  }
 
   const decoder = new TextDecoder('ascii')
   const startOffset = firstEntry.dataPosition
@@ -242,14 +271,18 @@ async function benchmarkTaffy(
   let count = 0
   for (const line of lines) {
     const trimmed = line.trim()
-    if (!trimmed || trimmed.startsWith('#')) continue
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue
+    }
 
     if (trimmed.includes(' ; ')) {
       count++
     }
 
     const currentMem = getMemoryMB()
-    if (currentMem > peakMem) peakMem = currentMem
+    if (currentMem > peakMem) {
+      peakMem = currentMem
+    }
   }
 
   const endTime = performance.now()
@@ -272,7 +305,9 @@ async function benchmarkMafTabix(
   dataset: Dataset,
   region: { refName: string; start: number; end: number },
 ): Promise<BenchmarkResult | null> {
-  if (!dataset.mafTabix) return null
+  if (!dataset.mafTabix) {
+    return null
+  }
 
   forceGC()
   await new Promise(r => setTimeout(r, 50))
@@ -285,12 +320,16 @@ async function benchmarkMafTabix(
   const compressedData = await file.readFile()
 
   const currentMem1 = getMemoryMB()
-  if (currentMem1 > peakMem) peakMem = currentMem1
+  if (currentMem1 > peakMem) {
+    peakMem = currentMem1
+  }
 
   const buffer = await unzip(compressedData)
 
   const currentMem2 = getMemoryMB()
-  if (currentMem2 > peakMem) peakMem = currentMem2
+  if (currentMem2 > peakMem) {
+    peakMem = currentMem2
+  }
 
   const decoder = new TextDecoder('utf-8')
   const text = decoder.decode(buffer)
@@ -298,7 +337,9 @@ async function benchmarkMafTabix(
 
   let count = 0
   for (const line of lines) {
-    if (!line.trim()) continue
+    if (!line.trim()) {
+      continue
+    }
     const parts = line.split('\t')
     const start = parseInt(parts[1]!, 10)
     const end = parseInt(parts[2]!, 10)
@@ -315,7 +356,9 @@ async function benchmarkMafTabix(
     }
 
     const currentMem = getMemoryMB()
-    if (currentMem > peakMem) peakMem = currentMem
+    if (currentMem > peakMem) {
+      peakMem = currentMem
+    }
   }
 
   const endTime = performance.now()
@@ -340,8 +383,10 @@ async function runBenchmarks() {
   console.log('='.repeat(80))
   console.log('')
 
-  if (typeof (global as any).gc !== 'function') {
-    console.log('WARNING: Run with --expose-gc for accurate memory measurements')
+  if (typeof (globalThis as Record<string, unknown>).gc !== 'function') {
+    console.log(
+      'WARNING: Run with --expose-gc for accurate memory measurements',
+    )
     console.log('')
   }
 
@@ -362,7 +407,8 @@ async function runBenchmarks() {
       console.log(`  TAF:    ${(tafSize / 1024 / 1024).toFixed(2)} MB`)
       console.log(`  BigMaf: ${(bbSize / 1024 / 1024).toFixed(2)} MB`)
       if (dataset.mafTabix) {
-        const bedSize = (await fs.stat(`${dataset.dir}/${dataset.mafTabix}`)).size
+        const bedSize = (await fs.stat(`${dataset.dir}/${dataset.mafTabix}`))
+          .size
         console.log(`  MafTabix: ${(bedSize / 1024 / 1024).toFixed(2)} MB`)
       }
       console.log('')
@@ -373,7 +419,9 @@ async function runBenchmarks() {
 
     for (const region of dataset.regions) {
       console.log('-'.repeat(80))
-      console.log(`Region: ${region.name} (${region.refName}:${region.start}-${region.end})`)
+      console.log(
+        `Region: ${region.name} (${region.refName}:${region.start}-${region.end})`,
+      )
       console.log('-'.repeat(80))
 
       // BigMaf
@@ -436,7 +484,9 @@ async function runBenchmarks() {
 
   for (const [_key, dataset] of Object.entries(DATASETS)) {
     console.log(`${dataset.name}:`)
-    console.log('Region           | Format    | Time (ms) | Features | Peak Mem (MB)')
+    console.log(
+      'Region           | Format    | Time (ms) | Features | Peak Mem (MB)',
+    )
     console.log('-'.repeat(70))
 
     const datasetResults = allResults.filter(r => r.dataset === dataset.name)
@@ -447,7 +497,7 @@ async function runBenchmarks() {
         console.log(
           `${r.region.padEnd(16)} | ${r.adapter.padEnd(9)} | ` +
             `${r.timeMs.toFixed(0).padStart(9)} | ${r.featureCount.toString().padStart(8)} | ` +
-            `${r.peakMemoryMB.toFixed(1).padStart(12)}`,
+            r.peakMemoryMB.toFixed(1).padStart(12),
         )
       }
     }
@@ -462,20 +512,30 @@ async function runBenchmarks() {
 
   for (const [_key, dataset] of Object.entries(DATASETS)) {
     const datasetResults = allResults.filter(r => r.dataset === dataset.name)
-    const largeResults = datasetResults.filter(r => r.region === 'large (100kb)')
+    const largeResults = datasetResults.filter(
+      r => r.region === 'large (100kb)',
+    )
 
     if (largeResults.length > 0) {
       const fastest = [...largeResults].sort((a, b) => a.timeMs - b.timeMs)[0]!
-      const lowestMem = [...largeResults].sort((a, b) => a.peakMemoryMB - b.peakMemoryMB)[0]!
+      const lowestMem = [...largeResults].sort(
+        (a, b) => a.peakMemoryMB - b.peakMemoryMB,
+      )[0]!
 
       console.log(`${dataset.name} (large 100kb query):`)
-      console.log(`  Fastest:       ${fastest.adapter} (${fastest.timeMs.toFixed(0)} ms)`)
-      console.log(`  Lowest memory: ${lowestMem.adapter} (${lowestMem.peakMemoryMB.toFixed(1)} MB)`)
+      console.log(
+        `  Fastest:       ${fastest.adapter} (${fastest.timeMs.toFixed(0)} ms)`,
+      )
+      console.log(
+        `  Lowest memory: ${lowestMem.adapter} (${lowestMem.peakMemoryMB.toFixed(1)} MB)`,
+      )
 
       for (const r of largeResults) {
         if (r !== fastest) {
           const ratio = r.timeMs / fastest.timeMs
-          console.log(`  ${r.adapter} is ${ratio.toFixed(1)}x slower than ${fastest.adapter}`)
+          console.log(
+            `  ${r.adapter} is ${ratio.toFixed(1)}x slower than ${fastest.adapter}`,
+          )
         }
       }
       console.log('')

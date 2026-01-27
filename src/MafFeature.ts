@@ -32,7 +32,7 @@ export default class MafFeature implements Feature {
     this._seq = seq
   }
 
-  get(name: string): unknown {
+  get(name: string): any {
     switch (name) {
       case 'start':
         return this._start

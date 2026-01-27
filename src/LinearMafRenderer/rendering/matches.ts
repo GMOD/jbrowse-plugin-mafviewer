@@ -18,7 +18,11 @@ export function renderMatches(
   ctx.fillStyle = 'lightgrey'
 
   // Highlight matching bases with light grey background
-  for (let i = 0, genomicOffset = 0, seqLength = alignment.length; i < seqLength; i++) {
+  for (
+    let i = 0, genomicOffset = 0, seqLength = alignment.length;
+    i < seqLength;
+    i++
+  ) {
     const refChar = seq[i]!
     if (refChar !== '-') {
       const alignChar = alignment[i]!

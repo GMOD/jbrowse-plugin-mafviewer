@@ -25,14 +25,19 @@ export function renderText(
   } = context
 
   if (scale >= CHAR_SIZE_WIDTH) {
-    for (let i = 0, genomicOffset = 0, seqLength = alignment.length; i < seqLength; i++) {
+    for (
+      let i = 0, genomicOffset = 0, seqLength = alignment.length;
+      i < seqLength;
+      i++
+    ) {
       const refChar = seq[i]!
       if (refChar !== '-') {
         const xPos = leftPx + scale * genomicOffset
         const textOffset = (scale - CHAR_SIZE_WIDTH) / 2 + 1
         const alignChar = alignment[i]!
         if (
-          (showAllLetters || refChar.toLowerCase() !== alignChar.toLowerCase()) &&
+          (showAllLetters ||
+            refChar.toLowerCase() !== alignChar.toLowerCase()) &&
           alignChar !== '-'
         ) {
           const baseLower = alignChar.toLowerCase()
