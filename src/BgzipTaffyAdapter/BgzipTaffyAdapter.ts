@@ -3,12 +3,7 @@ import {
   BaseFeatureDataAdapter,
   BaseOptions,
 } from '@jbrowse/core/data_adapters/BaseAdapter'
-import {
-  Feature,
-  Region,
-  SimpleFeature,
-  updateStatus,
-} from '@jbrowse/core/util'
+import { Feature, Region, updateStatus } from '@jbrowse/core/util'
 import { openLocation } from '@jbrowse/core/util/io'
 import { ObservableCreate } from '@jbrowse/core/util/rxjs'
 
@@ -19,6 +14,7 @@ import {
   filterFirstLineInstructions,
   parseRowInstructions,
 } from './rowInstructions'
+import MafFeature from '../MafFeature'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
 
 import type { RowInstruction } from './rowInstructions'
@@ -254,24 +250,32 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     return [...this.parseTafBlocksStreaming(buffer, runLengthEncodeBases)]
   }
 
+  // TextDecoder for efficient string building from typed array
+  private decoder = new TextDecoder('ascii')
+
   finalizeBlock(block: AlignmentBlock, columns: string[]) {
-    block.columnNumber = columns.length
+    const numCols = columns.length
+    block.columnNumber = numCols
+
+    // Pre-allocate buffer for bases (reused across rows)
+    const buffer = new Uint8Array(numCols)
+    const DASH = 45 // '-'.charCodeAt(0)
 
     for (let j = 0; j < block.rows.length; j++) {
       const row = block.rows[j]!
-      let bases = ''
       let length = 0
 
-      for (let i = 0, l = columns.length; i < l; i++) {
+      for (let i = 0; i < numCols; i++) {
         const col = columns[i]!
-        const base = col[j] ?? '-'
-        bases += base
-        if (base !== '-') {
+        const charCode = col.charCodeAt(j)
+        // Use dash if character doesn't exist (NaN from charCodeAt)
+        buffer[i] = isNaN(charCode) ? DASH : charCode
+        if (buffer[i] !== DASH) {
           length++
         }
       }
 
-      row.bases = bases
+      row.bases = this.decoder.decode(buffer)
       row.length = length
     }
   }
@@ -447,17 +451,15 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
           // Filter features that overlap with query region
           if (feat.end > query.start && feat.start < query.end) {
             observer.next(
-              new SimpleFeature({
-                id: feat.uniqueId,
-                data: {
-                  start: feat.start,
-                  end: feat.end,
-                  refName: query.refName,
-                  strand: feat.strand,
-                  alignments: feat.alignments,
-                  seq: feat.seq,
-                },
-              }),
+              new MafFeature(
+                feat.uniqueId,
+                feat.start,
+                feat.end,
+                query.refName,
+                feat.strand,
+                feat.alignments,
+                feat.seq,
+              ),
             )
           }
         }

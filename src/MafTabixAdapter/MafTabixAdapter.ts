@@ -2,16 +2,12 @@ import {
   BaseFeatureDataAdapter,
   BaseOptions,
 } from '@jbrowse/core/data_adapters/BaseAdapter'
-import {
-  Feature,
-  Region,
-  SimpleFeature,
-  updateStatus,
-} from '@jbrowse/core/util'
+import { Feature, Region, updateStatus } from '@jbrowse/core/util'
 import { openLocation } from '@jbrowse/core/util/io'
 import { ObservableCreate } from '@jbrowse/core/util/rxjs'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
 
+import MafFeature from '../MafFeature'
 import parseNewick from '../parseNewick'
 import { normalize } from '../util'
 import { subscribeToObservable } from '../util/observableUtils'
@@ -111,23 +107,20 @@ export default class MafTabixAdapter extends BaseFeatureDataAdapter {
         }
 
         observer.next(
-          new SimpleFeature({
-            id: feature.id(),
-            data: {
-              start: feature.get('start'),
-              end: feature.get('end'),
-              refName: feature.get('refName'),
-              name: feature.get('name'),
-              score: feature.get('score'),
+          new MafFeature(
+            feature.id(),
+            feature.get('start'),
+            feature.get('end'),
+            feature.get('refName'),
+            0, // strand determined per-alignment
+            alignments,
+            selectReferenceSequenceString(
               alignments,
-              seq: selectReferenceSequenceString(
-                alignments,
-                refAssemblyName,
-                query.assemblyName,
-                firstAssemblyNameFound,
-              ),
-            },
-          }),
+              refAssemblyName,
+              query.assemblyName,
+              firstAssemblyNameFound,
+            ) ?? '',
+          ),
         )
       })
 

@@ -1,9 +1,9 @@
 import { BaseFeatureDataAdapter } from '@jbrowse/core/data_adapters/BaseAdapter'
-import { SimpleFeature } from '@jbrowse/core/util'
 import { openLocation } from '@jbrowse/core/util/io'
 import { ObservableCreate } from '@jbrowse/core/util/rxjs'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
 
+import MafFeature from '../MafFeature'
 import parseNewick from '../parseNewick'
 import { normalize } from '../util'
 import { subscribeToObservable } from '../util/observableUtils'
@@ -83,16 +83,15 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
         }
 
         observer.next(
-          new SimpleFeature({
-            id: feature.id(),
-            data: {
-              start: feature.get('start'),
-              end: feature.get('end'),
-              refName: feature.get('refName'),
-              seq: referenceSeq,
-              alignments,
-            },
-          }),
+          new MafFeature(
+            feature.id(),
+            feature.get('start'),
+            feature.get('end'),
+            feature.get('refName'),
+            0, // strand not in BigMaf format
+            alignments,
+            referenceSeq ?? '',
+          ),
         )
       })
 
