@@ -1,4 +1,3 @@
-import { Sample } from '../LinearMafDisplay/types'
 import {
   CODE_GAP,
   CODE_SPACE,
@@ -6,6 +5,7 @@ import {
   getBaseCode,
   getLowerCode,
 } from './sequenceEncoding'
+import { Sample } from '../LinearMafDisplay/types'
 
 import type { EncodedSequence } from './sequenceEncoding'
 import type { AlignmentRecord } from '../LinearMafRenderer/rendering'
@@ -87,11 +87,10 @@ export function processFeaturesToFasta({
           let insertionSequence = ''
           while (i < alignment.length && getBaseCode(seq, i) === CODE_GAP) {
             const alignCode = getBaseCode(alignment, i)
-            if (alignCode !== CODE_GAP && alignCode !== CODE_SPACE) {
-              insertionSequence += decodeBaseLower(alignment, i)
-            } else {
-              insertionSequence += '-'
-            }
+            insertionSequence +=
+              alignCode !== CODE_GAP && alignCode !== CODE_SPACE
+                ? decodeBaseLower(alignment, i)
+                : '-'
             i++
           }
           i--

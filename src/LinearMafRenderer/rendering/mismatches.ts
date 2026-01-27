@@ -9,8 +9,8 @@ import { fillRect } from '../util'
 import { addToSpatialIndex, shouldAddToSpatialIndex } from './spatialIndex'
 import { GAP_STROKE_OFFSET } from './types'
 
-import type { EncodedSequence } from '../../util/sequenceEncoding'
 import type { RenderingContext } from './types'
+import type { EncodedSequence } from '../../util/sequenceEncoding'
 
 /**
  * Renders colored rectangles for mismatches and matches (when showAllLetters is true)
@@ -45,7 +45,10 @@ export function renderMismatches(
     if (refCode !== CODE_GAP) {
       if (alignCode !== CODE_GAP) {
         const xPos = leftPx + scale * genomicOffset
-        if (getLowerCode(refCode) !== getLowerCode(alignCode) && alignCode !== CODE_SPACE) {
+        if (
+          getLowerCode(refCode) !== getLowerCode(alignCode) &&
+          alignCode !== CODE_SPACE
+        ) {
           // Mismatch
           const base = decodeBaseLower(alignment, i)
           fillRect(

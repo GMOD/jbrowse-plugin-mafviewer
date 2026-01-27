@@ -17,7 +17,10 @@ import AbortablePromiseCache from 'abortable-promise-cache'
 import VirtualOffset from './virtualOffset'
 import parseNewick from '../parseNewick'
 import { normalize } from '../util'
-import { parseRowInstructions, filterFirstLineInstructions } from './rowInstructions'
+import {
+  filterFirstLineInstructions,
+  parseRowInstructions,
+} from './rowInstructions'
 import { countNonGapBases } from './util'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
 import { encodeSequence } from '../util/sequenceEncoding'
@@ -44,6 +47,15 @@ interface AlignmentBlock {
 interface SetupData {
   index: IndexData
   runLengthEncodeBases: boolean
+}
+
+interface TafFeature {
+  uniqueId: string
+  start: number
+  end: number
+  strand: number
+  alignments: Record<string, OrganismRecord>
+  seq: ReturnType<typeof encodeSequence>
 }
 
 // Binary search to find the index of the first element >= target
@@ -89,14 +101,15 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       const buffer = await unzip(response)
 
       const startOffset = firstEntry.virtualOffset.dataPosition
-      const endOffset = endBlock === startBlock
-        ? nextEntry.virtualOffset.dataPosition
-        : buffer.length
+      const endOffset =
+        endBlock === startBlock
+          ? nextEntry.virtualOffset.dataPosition
+          : buffer.length
 
       const slice = buffer.slice(startOffset, endOffset)
 
       // Parse TAF data into multiple alignment blocks (like taf_read_block)
-      return await this.parseTafBlocks(slice, runLengthEncodeBases, {
+      return this.parseTafBlocks(slice, runLengthEncodeBases, {
         statusCallback: statusCallback as (arg: string) => void,
         signal,
       })
@@ -178,7 +191,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   }
 
   // Parse bases from a column (like get_bases in taf.c)
-  parseBases(basesStr: string, expectedLength: number, runLengthEncodeBases: boolean): string {
+  parseBases(basesStr: string, runLengthEncodeBases: boolean): string {
     if (runLengthEncodeBases) {
       const tokens = basesStr.split(' ')
       let result = ''
@@ -196,20 +209,13 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
 
   // Faithful translation of taf_read_block from taf.c
   // Parses TAF data into multiple alignment blocks
-  async parseTafBlocks(
+  parseTafBlocks(
     buffer: Uint8Array,
     runLengthEncodeBases: boolean,
     opts?: BaseOptions,
-  ) {
+  ): TafFeature[] {
     const { statusCallback = () => {} } = opts || {}
-    const features: Array<{
-      uniqueId: string
-      start: number
-      end: number
-      strand: number
-      alignments: Record<string, OrganismRecord>
-      seq: ReturnType<typeof encodeSequence>
-    }> = []
+    const features: TafFeature[] = []
 
     let pBlock: AlignmentBlock | undefined
     let currentBlock: AlignmentBlock | undefined
@@ -266,21 +272,28 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
         }
 
         // Create new block from previous block + instructions
-        currentBlock = this.parseCoordinatesAndEstablishBlock(pBlock, instructions)
+        currentBlock = this.parseCoordinatesAndEstablishBlock(
+          pBlock,
+          instructions,
+        )
         columns = []
 
         // Add bases from this line as first column
         const basesAtIndex = basesAndTags.indexOf(' @')
-        const basesOnly = basesAtIndex !== -1 ? basesAndTags.slice(0, basesAtIndex) : basesAndTags
-        const bases = this.parseBases(basesOnly.trim(), currentBlock.rows.length, runLengthEncodeBases)
+        const basesOnly =
+          basesAtIndex !== -1
+            ? basesAndTags.slice(0, basesAtIndex)
+            : basesAndTags
+        const bases = this.parseBases(basesOnly.trim(), runLengthEncodeBases)
         if (bases.length > 0) {
           columns.push(bases)
         }
       } else if (currentBlock) {
         // Line without coordinates - just bases
         const basesAtIndex = trimmedLine.indexOf(' @')
-        const basesOnly = basesAtIndex !== -1 ? trimmedLine.slice(0, basesAtIndex) : trimmedLine
-        const bases = this.parseBases(basesOnly.trim(), currentBlock.rows.length, runLengthEncodeBases)
+        const basesOnly =
+          basesAtIndex !== -1 ? trimmedLine.slice(0, basesAtIndex) : trimmedLine
+        const bases = this.parseBases(basesOnly.trim(), runLengthEncodeBases)
         if (bases.length > 0) {
           columns.push(bases)
         }
@@ -323,7 +336,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   }
 
   // Convert a block to a feature (like what BigMafAdapter returns)
-  blockToFeature(block: AlignmentBlock) {
+  blockToFeature(block: AlignmentBlock): TafFeature | undefined {
     if (block.rows.length === 0 || block.columnNumber === 0) {
       return undefined
     }
@@ -397,8 +410,13 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   }
 
   async readTaiFile() {
-    const text = await openLocation(this.getConf('taiLocation')).readFile('utf8')
-    const lines = text.split('\n').map(f => f.trim()).filter(line => !!line)
+    const text = await openLocation(this.getConf('taiLocation')).readFile(
+      'utf8',
+    )
+    const lines = text
+      .split('\n')
+      .map(f => f.trim())
+      .filter(line => !!line)
     const entries = {} as IndexData
     let lastChr = ''
     let lastChrStart = 0
@@ -489,7 +507,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     query: Region,
     byteRanges: IndexData,
     runLengthEncodeBases: boolean,
-  ) {
+  ): Promise<TafFeature[] | undefined> {
     const records = byteRanges[query.refName]
     if (records && records.length > 0) {
       const getKey = (r: (typeof records)[0]) => r.chrStart
@@ -506,7 +524,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
           nextEntry,
           firstEntry,
           runLengthEncodeBases,
-        })
+        }) as Promise<TafFeature[]>
       }
     }
     return undefined

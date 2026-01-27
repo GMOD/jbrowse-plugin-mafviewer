@@ -7,8 +7,8 @@ import {
 import { fillRect } from '../util'
 import { GAP_STROKE_OFFSET } from './types'
 
-import type { EncodedSequence } from '../../util/sequenceEncoding'
 import type { RenderingContext } from './types'
+import type { EncodedSequence } from '../../util/sequenceEncoding'
 
 export function renderMatches(
   context: RenderingContext,
@@ -33,7 +33,10 @@ export function renderMatches(
     const refCode = getBaseCode(seq, i)
     if (refCode !== CODE_GAP) {
       const alignCode = getBaseCode(alignment, i)
-      if (getLowerCode(refCode) === getLowerCode(alignCode) && alignCode !== CODE_SPACE) {
+      if (
+        getLowerCode(refCode) === getLowerCode(alignCode) &&
+        alignCode !== CODE_SPACE
+      ) {
         const xPos = leftPx + scale * genomicOffset
         fillRect(ctx, xPos, rowTop, scale + GAP_STROKE_OFFSET, h, canvasWidth)
       }

@@ -1,8 +1,8 @@
-import { CODE_GAP, getBaseCode } from '../../util/sequenceEncoding'
 import { GAP_STROKE_OFFSET } from './types'
+import { CODE_GAP, getBaseCode } from '../../util/sequenceEncoding'
 
-import type { EncodedSequence } from '../../util/sequenceEncoding'
 import type { RenderingContext } from './types'
+import type { EncodedSequence } from '../../util/sequenceEncoding'
 
 export function renderGaps(
   context: RenderingContext,

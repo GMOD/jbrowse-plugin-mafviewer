@@ -328,10 +328,14 @@ describe('real-world MAF format parsing', () => {
     }
 
     // When querying with ce10 assembly
-    expect(selectReferenceSequence(alignments, '', 'ce10', 'ce10')).toBe(ce10Seq)
+    expect(selectReferenceSequence(alignments, '', 'ce10', 'ce10')).toBe(
+      ce10Seq,
+    )
 
     // When refAssemblyName is configured to override
-    expect(selectReferenceSequence(alignments, 'caePb3', 'ce10', 'ce10')).toBe(caePb3Seq)
+    expect(selectReferenceSequence(alignments, 'caePb3', 'ce10', 'ce10')).toBe(
+      caePb3Seq,
+    )
   })
 })
 

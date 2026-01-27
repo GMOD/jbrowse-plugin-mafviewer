@@ -24,7 +24,20 @@ const ENCODE_MAP: Record<string, number> = {
 const DECODE_MAP = ['a', 'c', 'g', 't', 'n', '-', ' ', 'A', 'C', 'G', 'T', 'N']
 
 // Lowercase versions for quick lookup (codes 0-6 are already lowercase, 7-11 need mapping)
-const DECODE_MAP_LOWER = ['a', 'c', 'g', 't', 'n', '-', ' ', 'a', 'c', 'g', 't', 'n']
+const DECODE_MAP_LOWER = [
+  'a',
+  'c',
+  'g',
+  't',
+  'n',
+  '-',
+  ' ',
+  'a',
+  'c',
+  'g',
+  't',
+  'n',
+]
 
 export interface EncodedSequence {
   data: Uint8Array
@@ -58,7 +71,10 @@ export function decodeBase(encoded: EncodedSequence, index: number): string {
 }
 
 // Decode a single base at index (always lowercase)
-export function decodeBaseLower(encoded: EncodedSequence, index: number): string {
+export function decodeBaseLower(
+  encoded: EncodedSequence,
+  index: number,
+): string {
   if (index < 0 || index >= encoded.length) {
     return ''
   }

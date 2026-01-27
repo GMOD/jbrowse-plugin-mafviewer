@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'vitest'
 
-import { parseRowInstructions } from './rowInstructions'
+import {
+  filterFirstLineInstructions,
+  parseRowInstructions,
+} from './rowInstructions'
 
 describe('parseRowInstructions', () => {
   test('parses single insert instruction', () => {
@@ -122,5 +125,86 @@ describe('parseRowInstructions', () => {
     expect(result[1]).toMatchObject({ type: 'g', row: 6, gapLength: 6 })
     expect(result[2]).toMatchObject({ type: 'i', row: 7 })
     expect(result[3]).toMatchObject({ type: 'i', row: 8 })
+  })
+})
+
+describe('filterFirstLineInstructions', () => {
+  test('converts s instructions to i instructions', () => {
+    const instructions = parseRowInstructions(
+      's 0 ce10.chrI 2272337 + 15072423 s 1 caeSp111.Scaffold80 35303 - 57550',
+    )
+    const filtered = filterFirstLineInstructions(instructions)
+
+    expect(filtered).toHaveLength(2)
+    expect(filtered[0]).toMatchObject({
+      type: 'i',
+      row: 0,
+      sequenceName: 'ce10.chrI',
+      start: 2272337,
+      strand: 1,
+      sequenceLength: 15072423,
+    })
+    expect(filtered[1]).toMatchObject({
+      type: 'i',
+      row: 1,
+      sequenceName: 'caeSp111.Scaffold80',
+      start: 35303,
+      strand: -1,
+      sequenceLength: 57550,
+    })
+  })
+
+  test('removes d instructions', () => {
+    const instructions = parseRowInstructions(
+      'd 2 d 2 s 0 ce10.chrI 100 + 1000 s 1 mm10.chr1 200 + 2000',
+    )
+    const filtered = filterFirstLineInstructions(instructions)
+
+    expect(filtered).toHaveLength(2)
+    expect(filtered.every(ins => ins.type === 'i')).toBe(true)
+  })
+
+  test('removes g instructions', () => {
+    const instructions = parseRowInstructions(
+      'g 0 50 s 0 ce10.chrI 100 + 1000 g 1 100',
+    )
+    const filtered = filterFirstLineInstructions(instructions)
+
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0]).toMatchObject({ type: 'i', row: 0 })
+  })
+
+  test('removes G instructions', () => {
+    const instructions = parseRowInstructions(
+      'G 0 ACGT s 0 ce10.chrI 100 + 1000',
+    )
+    const filtered = filterFirstLineInstructions(instructions)
+
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0]).toMatchObject({ type: 'i', row: 0 })
+  })
+
+  test('preserves i instructions unchanged', () => {
+    const instructions = parseRowInstructions(
+      'i 0 ce10.chrI 100 + 1000 i 1 mm10.chr1 200 + 2000',
+    )
+    const filtered = filterFirstLineInstructions(instructions)
+
+    expect(filtered).toHaveLength(2)
+    expect(filtered[0]).toMatchObject({ type: 'i', row: 0 })
+    expect(filtered[1]).toMatchObject({ type: 'i', row: 1 })
+  })
+
+  test('handles real TAF indexed line with d and s instructions', () => {
+    // This is a real example from the TAF file at an indexed position
+    const instructions = parseRowInstructions(
+      'd 2 d 2 s 0 ce10.chrI 2272337 + 15072423 s 1 caeSp111.Scaffold80 35303 - 57550',
+    )
+    const filtered = filterFirstLineInstructions(instructions)
+
+    // Should only have the 2 s->i converted instructions, d instructions removed
+    expect(filtered).toHaveLength(2)
+    expect(filtered[0]!.type).toBe('i')
+    expect(filtered[1]!.type).toBe('i')
   })
 })

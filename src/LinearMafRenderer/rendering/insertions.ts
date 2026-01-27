@@ -20,8 +20,8 @@ import {
   MIN_ROW_HEIGHT_FOR_BORDERS,
 } from './types'
 
-import type { EncodedSequence } from '../../util/sequenceEncoding'
 import type { RenderingContext } from './types'
+import type { EncodedSequence } from '../../util/sequenceEncoding'
 
 export function renderInsertions(
   context: RenderingContext,

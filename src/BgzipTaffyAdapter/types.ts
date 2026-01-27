@@ -1,4 +1,5 @@
 import VirtualOffset from './virtualOffset'
+
 import type { EncodedSequence } from '../util/sequenceEncoding'
 
 export interface OrganismRecord {

@@ -39,7 +39,9 @@ export type RowInstruction =
 // When starting from an indexed position:
 // 1. Convert 's' (substitute) to 'i' (insert) - because there's no previous row to substitute
 // 2. Remove 'd', 'g', 'G' instructions entirely - they reference non-existent previous state
-export function filterFirstLineInstructions(instructions: RowInstruction[]): RowInstruction[] {
+export function filterFirstLineInstructions(
+  instructions: RowInstruction[],
+): RowInstruction[] {
   return instructions
     .filter(ins => ins.type === 'i' || ins.type === 's')
     .map(ins => {

@@ -32,7 +32,8 @@ export function shouldAddToSpatialIndex(
   // At low zoom (large bpPerPx), use larger threshold to reduce index size
   // Items within 1px of each other in the same row are not added
   return (
-    Math.abs(xPos - lastInsertedX) > MIN_X_DISTANCE * Math.max(1, context.bpPerPx)
+    Math.abs(xPos - lastInsertedX) >
+    MIN_X_DISTANCE * Math.max(1, context.bpPerPx)
   )
 }
 

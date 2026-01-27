@@ -10,9 +10,9 @@ import { normalize } from '../util'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
 import { encodeSequence } from '../util/sequenceEncoding'
 
+import type { EncodedSequence } from '../util/sequenceEncoding'
 import type { BaseOptions } from '@jbrowse/core/data_adapters/BaseAdapter'
 import type { Feature, Region } from '@jbrowse/core/util'
-import type { EncodedSequence } from '../util/sequenceEncoding'
 
 interface OrganismRecord {
   chr: string
