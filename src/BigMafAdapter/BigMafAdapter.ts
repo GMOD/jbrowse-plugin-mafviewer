@@ -39,12 +39,10 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
     }
   }
   async setupPre() {
-    if (!this.setupP) {
-      this.setupP = this.setup().catch((e: unknown) => {
-        this.setupP = undefined
-        throw e
-      })
-    }
+    this.setupP ??= this.setup().catch((e: unknown) => {
+      this.setupP = undefined
+      throw e
+    })
     return this.setupP
   }
 
@@ -74,19 +72,9 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
         for (const feature of features) {
           const maf = feature.get('mafBlock') as string
           const blocks = maf.split(';')
-
-          // Count sequence blocks first to pre-size arrays
-          let sequenceBlockCount = 0
-          for (const block of blocks) {
-            if (block.startsWith('s')) {
-              sequenceBlockCount++
-            }
-          }
-
           const alignments = {} as Record<string, OrganismRecord>
           let referenceSeq: EncodedSequence | undefined
 
-          // Single-pass processing
           for (const block of blocks) {
             if (block.startsWith('s')) {
               const parts = block.split(WHITESPACE_REGEX)

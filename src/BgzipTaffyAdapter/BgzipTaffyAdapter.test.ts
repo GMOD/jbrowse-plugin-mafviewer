@@ -828,6 +828,40 @@ describe('BgzipTaffyAdapter integration tests', () => {
     expect(featuresArray.length).toBe(0)
   })
 
+  test('adapter handles single-entry index files (evolverMammals)', async () => {
+    const adapter = new BgzipTaffyAdapter(
+      configSchema.create({
+        tafGzLocation: {
+          localPath: require.resolve('../../test_data/evolverMammals.taf.gz'),
+          locationType: 'LocalPathLocation',
+        },
+        taiLocation: {
+          localPath: require.resolve(
+            '../../test_data/evolverMammals.taf.gz.tai',
+          ),
+          locationType: 'LocalPathLocation',
+        },
+      }),
+    )
+
+    const refNames = await adapter.getRefNames()
+    expect(refNames).toContain('Anc0refChr0')
+
+    const features = adapter.getFeatures({
+      assemblyName: 'Anc0',
+      refName: 'Anc0refChr0',
+      start: 0,
+      end: 100,
+    })
+
+    const featuresArray = await firstValueFrom(features.pipe(toArray()))
+    expect(featuresArray.length).toBeGreaterThan(0)
+
+    const first = featuresArray[0]!
+    expect(first.get('alignments')).toBeDefined()
+    expect(first.get('seq')).toBeDefined()
+  })
+
   test('feature alignments contain expected organism data', async () => {
     const adapter = new BgzipTaffyAdapter(
       configSchema.create({

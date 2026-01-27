@@ -100,9 +100,12 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       const buffer = await unzip(response)
 
       const startOffset = firstEntry.virtualOffset.dataPosition
+      const nextOffset = nextEntry.virtualOffset.dataPosition
+      // When entries are in the same block, use nextOffset only if it's past startOffset.
+      // If they're equal (single entry case), read to end of buffer.
       const endOffset =
-        endBlock === startBlock
-          ? nextEntry.virtualOffset.dataPosition
+        endBlock === startBlock && nextOffset > startOffset
+          ? nextOffset
           : buffer.length
 
       const slice = buffer.slice(startOffset, endOffset)
