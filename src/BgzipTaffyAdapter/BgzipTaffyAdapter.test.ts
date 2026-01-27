@@ -1,8 +1,9 @@
-import PluginManager from '@jbrowse/core/PluginManager'
-import { ConfigurationSchema } from '@jbrowse/core/configuration'
+import { firstValueFrom } from 'rxjs'
+import { toArray } from 'rxjs/operators'
 import { describe, expect, test } from 'vitest'
 
 import BgzipTaffyAdapter from './BgzipTaffyAdapter'
+import configSchema from './configSchema'
 import {
   filterFirstLineInstructions,
   parseRowInstructions,
@@ -425,7 +426,9 @@ describe('BgzipTaffyAdapter methods', () => {
             if (row) {
               row.start += ins.gapLength
             }
-          } else if (ins.type === 'G') {
+          }
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          else if (ins.type === 'G') {
             const row = block.rows[ins.row]
             if (row) {
               row.start += ins.gapSubstring.length
@@ -448,8 +451,7 @@ describe('BgzipTaffyAdapter methods', () => {
           const row = block.rows[j]!
           let bases = ''
           let length = 0
-          for (let i = 0; i < columns.length; i++) {
-            const col = columns[i]!
+          for (const col of columns) {
             const base = col[j] ?? '-'
             bases += base
             if (base !== '-') {
@@ -675,5 +677,196 @@ describe('BgzipTaffyAdapter methods', () => {
     expect(block.rows[0]!.length).toBe(2)
     expect(block.rows[1]!.bases).toBe('CCC')
     expect(block.rows[1]!.length).toBe(3)
+  })
+})
+
+describe('BgzipTaffyAdapter integration tests', () => {
+  test('adapter can fetch features from celegans chrI.taf.gz', async () => {
+    const adapter = new BgzipTaffyAdapter(
+      configSchema.create({
+        tafGzLocation: {
+          localPath: require.resolve('../../test_data/celegans/chrI.taf.gz'),
+          locationType: 'LocalPathLocation',
+        },
+        taiLocation: {
+          localPath: require.resolve(
+            '../../test_data/celegans/chrI.taf.gz.tai',
+          ),
+          locationType: 'LocalPathLocation',
+        },
+        nhLocation: {
+          localPath: require.resolve('../../test_data/celegans/ce10.7way.nh'),
+          locationType: 'LocalPathLocation',
+        },
+      }),
+    )
+
+    const features = adapter.getFeatures({
+      assemblyName: 'ce10',
+      refName: 'chrI',
+      start: 3700,
+      end: 4000,
+    })
+
+    const featuresArray = await firstValueFrom(features.pipe(toArray()))
+    expect(featuresArray.length).toBeGreaterThan(0)
+
+    const first = featuresArray[0]!
+    expect(first.get('refName')).toBe('chrI')
+    expect(first.get('start')).toBeGreaterThanOrEqual(0)
+    expect(first.get('end')).toBeGreaterThan(first.get('start'))
+    expect(first.get('alignments')).toBeDefined()
+  })
+
+  test('adapter returns correct ref names', async () => {
+    const adapter = new BgzipTaffyAdapter(
+      configSchema.create({
+        tafGzLocation: {
+          localPath: require.resolve('../../test_data/celegans/chrI.taf.gz'),
+          locationType: 'LocalPathLocation',
+        },
+        taiLocation: {
+          localPath: require.resolve(
+            '../../test_data/celegans/chrI.taf.gz.tai',
+          ),
+          locationType: 'LocalPathLocation',
+        },
+      }),
+    )
+
+    const refNames = await adapter.getRefNames()
+    expect(refNames).toContain('chrI')
+  })
+
+  test('adapter can fetch samples with newick tree', async () => {
+    const adapter = new BgzipTaffyAdapter(
+      configSchema.create({
+        tafGzLocation: {
+          localPath: require.resolve('../../test_data/celegans/chrI.taf.gz'),
+          locationType: 'LocalPathLocation',
+        },
+        taiLocation: {
+          localPath: require.resolve(
+            '../../test_data/celegans/chrI.taf.gz.tai',
+          ),
+          locationType: 'LocalPathLocation',
+        },
+        nhLocation: {
+          localPath: require.resolve('../../test_data/celegans/ce10.7way.nh'),
+          locationType: 'LocalPathLocation',
+        },
+      }),
+    )
+
+    const result = await adapter.getSamples({
+      assemblyName: 'ce10',
+      refName: 'chrI',
+      start: 0,
+      end: 1000,
+    })
+
+    expect(result.tree).toBeDefined()
+  })
+
+  test('adapter can fetch features from a larger region', async () => {
+    const adapter = new BgzipTaffyAdapter(
+      configSchema.create({
+        tafGzLocation: {
+          localPath: require.resolve('../../test_data/celegans/chrI.taf.gz'),
+          locationType: 'LocalPathLocation',
+        },
+        taiLocation: {
+          localPath: require.resolve(
+            '../../test_data/celegans/chrI.taf.gz.tai',
+          ),
+          locationType: 'LocalPathLocation',
+        },
+      }),
+    )
+
+    const features = adapter.getFeatures({
+      assemblyName: 'ce10',
+      refName: 'chrI',
+      start: 3700,
+      end: 50000,
+    })
+
+    const featuresArray = await firstValueFrom(features.pipe(toArray()))
+    expect(featuresArray.length).toBeGreaterThan(0)
+
+    for (const feat of featuresArray) {
+      expect(feat.get('alignments')).toBeDefined()
+      expect(feat.get('seq')).toBeDefined()
+      expect(feat.get('start')).toBeLessThan(feat.get('end'))
+    }
+  })
+
+  test('adapter returns empty array for region with no data', async () => {
+    const adapter = new BgzipTaffyAdapter(
+      configSchema.create({
+        tafGzLocation: {
+          localPath: require.resolve('../../test_data/celegans/chrI.taf.gz'),
+          locationType: 'LocalPathLocation',
+        },
+        taiLocation: {
+          localPath: require.resolve(
+            '../../test_data/celegans/chrI.taf.gz.tai',
+          ),
+          locationType: 'LocalPathLocation',
+        },
+      }),
+    )
+
+    const features = adapter.getFeatures({
+      assemblyName: 'ce10',
+      refName: 'nonexistent',
+      start: 0,
+      end: 1000,
+    })
+
+    const featuresArray = await firstValueFrom(features.pipe(toArray()))
+    expect(featuresArray.length).toBe(0)
+  })
+
+  test('feature alignments contain expected organism data', async () => {
+    const adapter = new BgzipTaffyAdapter(
+      configSchema.create({
+        tafGzLocation: {
+          localPath: require.resolve('../../test_data/celegans/chrI.taf.gz'),
+          locationType: 'LocalPathLocation',
+        },
+        taiLocation: {
+          localPath: require.resolve(
+            '../../test_data/celegans/chrI.taf.gz.tai',
+          ),
+          locationType: 'LocalPathLocation',
+        },
+      }),
+    )
+
+    const features = adapter.getFeatures({
+      assemblyName: 'ce10',
+      refName: 'chrI',
+      start: 3700,
+      end: 4000,
+    })
+
+    const featuresArray = await firstValueFrom(features.pipe(toArray()))
+    expect(featuresArray.length).toBeGreaterThan(0)
+
+    const first = featuresArray[0]!
+    const alignments = first.get('alignments')
+
+    expect(alignments).toBeDefined()
+    expect(typeof alignments).toBe('object')
+
+    const organismNames = Object.keys(alignments)
+    expect(organismNames.length).toBeGreaterThan(0)
+
+    const firstOrganism = alignments[organismNames[0]!]
+    expect(firstOrganism).toHaveProperty('chr')
+    expect(firstOrganism).toHaveProperty('start')
+    expect(firstOrganism).toHaveProperty('strand')
+    expect(firstOrganism).toHaveProperty('seq')
   })
 })

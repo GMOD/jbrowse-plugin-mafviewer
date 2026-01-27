@@ -21,7 +21,6 @@ import {
   filterFirstLineInstructions,
   parseRowInstructions,
 } from './rowInstructions'
-import { countNonGapBases } from './util'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
 import { encodeSequence } from '../util/sequenceEncoding'
 
@@ -178,7 +177,9 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
         if (row) {
           row.start += ins.gapLength
         }
-      } else if (ins.type === 'G') {
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      else if (ins.type === 'G') {
         // Gap with substring: increment start by substring length
         const row = block.rows[ins.row]
         if (row) {
@@ -321,7 +322,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
       let bases = ''
       let length = 0
 
-      for (let i = 0; i < columns.length; i++) {
+      for (let i = 0, l = columns.length; i < l; i++) {
         const col = columns[i]!
         const base = col[j] ?? '-'
         bases += base
@@ -343,27 +344,30 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
 
     const row0 = block.rows[0]!
     const alignments: Record<string, OrganismRecord> = {}
+    let row0Seq: ReturnType<typeof encodeSequence> | undefined
 
     for (const row of block.rows) {
       const { assemblyName, chr } = parseAssemblyAndChrSimple(row.sequenceName)
+      const seq = encodeSequence(row.bases)
+      if (row === row0) {
+        row0Seq = seq
+      }
       alignments[assemblyName] = {
         chr,
         start: row.start,
         srcSize: row.sequenceLength,
         strand: row.strand,
-        seq: encodeSequence(row.bases),
+        seq,
       }
     }
 
-    const nonGapLength = countNonGapBases(row0.bases)
-
     return {
-      uniqueId: `${row0.start}-${nonGapLength}`,
+      uniqueId: `${row0.start}-${row0.length}`,
       start: row0.start,
-      end: row0.start + nonGapLength,
+      end: row0.start + row0.length,
       strand: row0.strand,
       alignments,
-      seq: encodeSequence(row0.bases),
+      seq: row0Seq!,
     }
   }
 
