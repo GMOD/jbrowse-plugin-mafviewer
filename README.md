@@ -11,16 +11,24 @@ JBrowse 2
 
 https://jbrowse.org/code/jb2/main/?config=%2Fdemos%2Fmaf%2Fhg38%2Fdistconfig.json&session=share-bJXbDiWcc9&password=87GhV
 
+## Supported formats
+
+This plugin supports three input formats:
+
+1. **BigMaf** - UCSC BigMaf format (.bb files)
+2. **MAF tabix** - bgzip-compressed MAF converted to BED format with tabix index
+3. **TAF (Taffy)** - bgzip-compressed TAF format with .tai index
+
 ## GUI usage (e.g. in JBrowse Desktop)
 
 This short screenshot workflow shows how you can load your own custom MAF files
-via the GUI
+via the GUI.
 
-First install the plugin via the plugin store
+First install the plugin via the plugin store:
 
 ![](img/3.png)
 
-Then use the custom "Add track workflow"
+Then use the custom "Add track workflow":
 
 ![](img/2.png)
 
@@ -39,9 +47,39 @@ Then use the custom "Add track workflow"
 }
 ```
 
+### Example BgzipTaffyAdapter config (TAF format)
+
+TAF (Transposed Alignment Format) is often more compact than MAF and works well
+with large multi-species alignments. See
+https://github.com/ComparativeGenomicsToolkit/taffy for more details.
+
+```json
+{
+  "type": "MafTrack",
+  "trackId": "taf-example",
+  "name": "TAF alignment",
+  "assemblyNames": ["hg38"],
+  "adapter": {
+    "type": "BgzipTaffyAdapter",
+    "tafGzLocation": {
+      "uri": "alignment.taf.gz"
+    },
+    "taiLocation": {
+      "uri": "alignment.taf.gz.tai"
+    },
+    "nhLocation": {
+      "uri": "species_tree.nh"
+    }
+  }
+}
+```
+
+The `nhLocation` is optional but provides a species tree for display in the
+sidebar.
+
 ### Example MafTabixAdapter config
 
-can use nhLocation or samples array on adapter
+You can use `nhLocation` (newick tree) or `samples` array on the adapter.
 
 ```json
 {
@@ -66,7 +104,7 @@ can use nhLocation or samples array on adapter
 
 ### Example BigMafAdapter config
 
-can use nhLocation or samples array on adapter
+You can use `nhLocation` (newick tree) or `samples` array on the adapter.
 
 ```json
 {
@@ -148,22 +186,23 @@ This page discusses some examples
 https://github.com/ComparativeGenomicsToolkit/cactus/blob/master/doc/progressive.md#maf-export
 
 Thanks to Sam Talbot (https://github.com/SamCT) for initially creating the
-Cactus -> JBrowse 2 MAF example
+Cactus -> JBrowse 2 MAF example.
 
-Please note that MAFViewer wants non-overlapping blocks, please check if this is
-the case
+Note: This plugin expects non-overlapping alignment blocks. Ensure your MAF/TAF
+file meets this requirement.
 
 ## Prepare data
 
-1. BigMaf format, which can be created following UCSC guidelines
-   (https://genome.ucsc.edu/FAQ/FAQformat.html#format9.3)
+Three formats are supported:
 
-2. MAF tabix based format, based on a custom BED created via conversion tools in
-   this repo (see maf2bed)
+1. **BigMaf** - UCSC BigMaf format (see
+   https://genome.ucsc.edu/FAQ/FAQformat.html#format9.3)
+2. **MAF tabix** - bgzip-compressed BED converted from MAF using maf2bed
+3. **TAF (Taffy)** - bgzip-compressed TAF with .tai index (recommended for large
+   alignments)
 
-_Note: All these formats generally start with a MAF as input. Note that your MAF
-file should contain the species name and chromosome name e.g. hg38.chr1 in the
-sequence identifiers._
+_Note: All formats start with a MAF as input. Your MAF file should contain the
+species name and chromosome name (e.g. hg38.chr1) in the sequence identifiers._
 
 ### Option 1. Preparing BigMaf
 
@@ -186,8 +225,8 @@ identifiers in the MAF file will say something like hg38.chr1, therefore, the
 argument to maf2bed should just be hg38 to remove hg38 part of the identifier.
 
 If your MAF file does not include the species name as part of the identifier,
-you should add the species into them the those scaffold/chromosome e.g. create
-hg38.chr1 if it was just chr1 before)
+you should add the species name to the scaffold/chromosome names (e.g. create
+hg38.chr1 if it was just chr1 before).
 
 If all is well, your BED file should have 6 columns, with
 `chr, start, end, id, score, alignment_data`, where `alignment_data` is
@@ -196,3 +235,28 @@ separated by `:`.
 
 Note: If you can't use the `cargo install maf2bed` binary, there is a
 `bin/maf2bed.pl` perl version of it in this repo
+
+### Option 3. Preparing TAF (Taffy)
+
+TAF (Transposed Alignment Format) is a column-oriented format that is often more
+compact than MAF, especially for large multi-species alignments. It uses
+run-length encoding and avoids the block fragmentation issues that MAF has with
+many sequences.
+
+Install taffy from https://github.com/ComparativeGenomicsToolkit/taffy
+
+```bash
+# Convert MAF to bgzip-compressed TAF and create index
+taffy view -i file.maf | bgzip > out.taf.gz
+taffy index -i out.taf.gz
+```
+
+This creates `out.taf.gz` and `out.taf.gz.tai` (the index file).
+
+For large alignments, you may want to normalize the TAF file first to merge
+short alignment blocks:
+
+```bash
+taffy view -i file.maf | taffy norm | bgzip > out.taf.gz
+taffy index -i out.taf.gz
+```
