@@ -2,9 +2,6 @@
 
 A viewer for multiple alignment format (MAF) files in JBrowse 2
 
-This is a port of the JBrowse 1 plugin https://github.com/cmdcolin/mafviewer to
-JBrowse 2
-
 ![](img/1.png)
 
 ## Demo
@@ -15,9 +12,11 @@ https://jbrowse.org/code/jb2/main/?config=%2Fdemos%2Fmaf%2Fhg38%2Fdistconfig.jso
 
 This plugin supports three input formats:
 
-1. **BigMaf** - UCSC BigMaf format (.bb files)
+1. **BigMaf** - UCSC BigMaf format e.g. .bb/.bigMaf
+   (https://genome.ucsc.edu/goldenpath/help/bigMaf.html)
 2. **MAF tabix** - bgzip-compressed MAF converted to BED format with tabix index
-3. **TAF (Taffy)** - bgzip-compressed TAF format with .tai index
+3. **TAF (Taffy)** - bgzip-compressed TAF format
+   (https://github.com/ComparativeGenomicsToolkit/taffy)
 
 ## GUI usage (e.g. in JBrowse Desktop)
 
@@ -41,7 +40,7 @@ Then use the custom "Add track workflow":
   "plugins": [
     {
       "name": "MafViewer",
-      "url": "https://unpkg.com/jbrowse-plugin-mafviewer/dist/jbrowse-plugin-mafviewer.umd.production.min.js"
+      "url": "https://jbrowse.org/plugins/jbrowse-plugin-mafviewer/dist/jbrowse-plugin-mafviewer.umd.production.min.js"
     }
   ]
 }
@@ -260,3 +259,8 @@ short alignment blocks:
 taffy view -i file.maf | taffy norm | bgzip > out.taf.gz
 taffy index -i out.taf.gz
 ```
+
+## Footnote
+
+This is a port of the JBrowse 1 plugin https://github.com/cmdcolin/mafviewer to
+JBrowse 2
