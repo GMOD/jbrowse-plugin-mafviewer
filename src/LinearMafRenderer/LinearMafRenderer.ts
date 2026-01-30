@@ -56,11 +56,28 @@ export default class LinearMafRenderer extends FeatureRendererType {
     const height = samples.length * rowHeight + 100
     const width = (region.end - region.start) / bpPerPx
 
+    const scaledWidth = Math.ceil(width * highResolutionScaling)
+    const scaledHeight = Math.ceil(height * highResolutionScaling)
+
+    if (scaledWidth > 16384 || scaledHeight > 16384) {
+      console.warn(
+        '[LinearMafRenderer] Canvas dimensions may exceed browser limits:',
+        {
+          width,
+          height,
+          scaledWidth,
+          scaledHeight,
+          highResolutionScaling,
+          bpPerPx,
+          regionSize: region.end - region.start,
+          samplesCount: samples.length,
+          rowHeight,
+        },
+      )
+    }
+
     // Create canvas with high resolution scaling support
-    const canvas = createCanvas(
-      Math.ceil(width * highResolutionScaling),
-      Math.ceil(height * highResolutionScaling),
-    )
+    const canvas = createCanvas(scaledWidth, scaledHeight)
     const ctx = canvas.getContext('2d')
     if (!ctx) {
       throw new Error('Could not get canvas context')

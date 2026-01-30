@@ -85,7 +85,10 @@ export function processFeaturesToFasta({
           }
           i--
 
-          if (insertionSequence.length > 0) {
+          // Only add insertion if it contains at least one actual base (not
+          // just gaps). This filters out insertions that only exist in samples
+          // that aren't currently visible.
+          if (insertionSequence.length > 0 && /[^-]/.test(insertionSequence)) {
             const insertPos = leftCoord + o - region.start
             if (insertPos >= 0 && insertPos <= rlen) {
               const existing = insertionsAtPosition.get(insertPos) || []

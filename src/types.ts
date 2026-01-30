@@ -1,6 +1,17 @@
+import type { BaseOptions } from '@jbrowse/core/data_adapters/BaseAdapter'
+
 /**
  * Shared types for MAF alignment data
  */
+
+/**
+ * Options for MAF adapter getFeatures call.
+ * Extends BaseOptions with optional samples filter for subtree optimization.
+ */
+export interface MafAdapterOptions extends BaseOptions {
+  /** If provided, only parse alignments for these sample IDs */
+  samples?: Sample[]
+}
 
 /**
  * Represents a single organism's alignment within a MAF block.

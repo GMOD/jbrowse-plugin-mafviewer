@@ -16,7 +16,7 @@ import {
   selectReferenceSequenceString,
 } from '../util/parseAssemblyName'
 
-import type { AlignmentRecord } from '../types'
+import type { AlignmentRecord, MafAdapterOptions } from '../types'
 
 export default class MafTabixAdapter extends BaseFeatureDataAdapter {
   public setupP?: Promise<{ adapter: BaseFeatureDataAdapter }>
@@ -61,11 +61,15 @@ export default class MafTabixAdapter extends BaseFeatureDataAdapter {
     return adapter.getHeader()
   }
 
-  getFeatures(query: Region, opts?: BaseOptions) {
+  getFeatures(query: Region, opts?: MafAdapterOptions) {
     return ObservableCreate<Feature>(async observer => {
       const { adapter } = await this.setup(opts)
       let firstAssemblyNameFound = ''
       const refAssemblyName = this.getConf('refAssemblyName')
+
+      const sampleFilter = opts?.samples
+        ? new Set(opts.samples.map(s => s.id))
+        : undefined
 
       await subscribeToObservable(adapter.getFeatures(query, opts), feature => {
         const data = (feature.get('field5') as string).split(',')
@@ -93,6 +97,10 @@ export default class MafTabixAdapter extends BaseFeatureDataAdapter {
           if (assemblyName) {
             if (!firstAssemblyNameFound) {
               firstAssemblyNameFound = assemblyName
+            }
+
+            if (sampleFilter && !sampleFilter.has(assemblyName)) {
+              continue
             }
 
             alignments[assemblyName] = {

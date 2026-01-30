@@ -296,3 +296,131 @@ test('includeInsertions with no insertions present', () => {
   // Should behave same as without includeInsertions since there are none
   expect(result).toMatchSnapshot()
 })
+
+test('includeInsertions - insertion only in non-visible sample should not add gaps', () => {
+  // This tests the bug fix where insertions from non-visible samples were
+  // causing gaps to be added to visible samples.
+  //
+  // Scenario: 3 samples exist, but only 2 are selected for display.
+  // The 3rd (non-visible) sample has an insertion, which creates a gap in the
+  // reference sequence. The visible samples should NOT have extra gaps added.
+  //
+  // seq:       AC--GTAC (reference has gap due to assembly3's insertion)
+  // assembly1: AC--GTAC (no insertion, just gaps where assembly3 has insertion)
+  // assembly2: AC--GTAC (no insertion, just gaps where assembly3 has insertion)
+  // assembly3: ACTTGTAC (has TT insertion) - NOT in samples list
+  const mockFeature = new SimpleFeature({
+    uniqueId: '123',
+    refName: 'abc',
+    start: 100,
+    end: 106,
+    seq: 'AC--GTAC',
+    alignments: {
+      assembly1: {
+        chr: 'chr1',
+        start: 100,
+        seq: 'AC--GTAC',
+        strand: 1,
+      },
+      assembly2: {
+        chr: 'chr2',
+        start: 200,
+        seq: 'AC--GTAC',
+        strand: 1,
+      },
+      assembly3: {
+        chr: 'chr3',
+        start: 300,
+        seq: 'ACTTGTAC',
+        strand: 1,
+      },
+    },
+  })
+
+  // Only include assembly1 and assembly2, NOT assembly3
+  const result = processFeaturesToFasta({
+    features: makeMap([mockFeature]),
+    samples: [{ id: 'assembly1' }, { id: 'assembly2' }],
+    includeInsertions: true,
+    showAllLetters: true,
+    regions: [
+      {
+        refName: 'chr1',
+        start: 100,
+        end: 106,
+        assemblyName: 'assembly1',
+      },
+    ],
+  })
+
+  // Since neither visible sample has an actual insertion (both have only gaps
+  // at the insertion position), no insertion columns should be added.
+  // The output should be 6 characters (the reference length), not 8.
+  expect(result[0]).toBe('acgtac')
+  expect(result[1]).toBe('acgtac')
+  expect(result[0]).toHaveLength(6)
+  expect(result[1]).toHaveLength(6)
+})
+
+test('includeInsertions - mixed visible/non-visible insertions', () => {
+  // Scenario: Reference has a gap. One visible sample has an insertion,
+  // another visible sample doesn't, and a non-visible sample also has an
+  // insertion. Only the visible sample's insertion should be included.
+  //
+  // seq:       AC---GTAC (reference has 3-bp gap)
+  // assembly1: AC-T-GTAC (has T insertion, 1 bp) - visible
+  // assembly2: AC---GTAC (no insertion) - visible
+  // assembly3: ACTTTGTAC (has TTT insertion, 3 bp) - NOT visible
+  const mockFeature = new SimpleFeature({
+    uniqueId: '123',
+    refName: 'abc',
+    start: 100,
+    end: 106,
+    seq: 'AC---GTAC',
+    alignments: {
+      assembly1: {
+        chr: 'chr1',
+        start: 100,
+        seq: 'AC-T-GTAC',
+        strand: 1,
+      },
+      assembly2: {
+        chr: 'chr2',
+        start: 200,
+        seq: 'AC---GTAC',
+        strand: 1,
+      },
+      assembly3: {
+        chr: 'chr3',
+        start: 300,
+        seq: 'ACTTTGTAC',
+        strand: 1,
+      },
+    },
+  })
+
+  // Only include assembly1 and assembly2, NOT assembly3
+  const result = processFeaturesToFasta({
+    features: makeMap([mockFeature]),
+    samples: [{ id: 'assembly1' }, { id: 'assembly2' }],
+    includeInsertions: true,
+    showAllLetters: true,
+    regions: [
+      {
+        refName: 'chr1',
+        start: 100,
+        end: 106,
+        assemblyName: 'assembly1',
+      },
+    ],
+  })
+
+  // assembly1 has a 1-bp insertion (t), so the max insertion length is 1
+  // (not 3, because assembly3's insertion should be ignored)
+  // assembly1: act-gtac -> with insertion expanded: actgtac (7 chars)
+  // assembly2: ac--gtac -> with insertion expanded: ac-gtac (7 chars)
+  expect(result[0]).toBe('actgtac')
+  expect(result[1]).toBe('ac-gtac')
+  expect(result[0]).toHaveLength(7)
+  expect(result[1]).toHaveLength(7)
+})
