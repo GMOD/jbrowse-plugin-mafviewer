@@ -1,21 +1,55 @@
 name: Integration
 
-on: push
+on:
+  push:
+  schedule:
+    - cron: '0 9 * * 1'
 
 jobs:
-  integration:
-    name: Run integration tests
+  build-and-lint:
+    name: Build and lint
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'skip ci')"
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 20.x
+      - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
       - name: Install deps (with cache)
         uses: bahmutov/npm-install@v1
-      - name: lint
-        run: yarn lint
-      - name: build
+      - name: Build
         run: yarn build
+      - name: Lint
+        run: yarn lint
+
+  e2e-tests:
+    name: E2E tests (nightly)
+    runs-on: ubuntu-latest
+    needs: build-and-lint
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - name: Install deps (with cache)
+        uses: bahmutov/npm-install@v1
+      - name: Install JBrowse CLI
+        run: npm install -g @jbrowse/cli
+      - name: Setup JBrowse nightly
+        run: jbrowse create .test-jbrowse-nightly --nightly
+      - name: Run E2E tests
+        run: TEST_JBROWSE_VERSION=nightly yarn vitest run test/
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-nightly
+          path: test-screenshots/
+      - name: Upload image snapshot diffs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-diffs-nightly
+          path: test/__image_snapshots__/__diff_output__/

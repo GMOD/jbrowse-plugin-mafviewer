@@ -126,3 +126,8 @@ cypress/screenshots
 
 meta.json
 .vscode
+
+# E2E test artifacts
+.test-jbrowse-*
+test-screenshots/
+debug-no-canvas.png
