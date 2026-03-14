@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import {
@@ -78,7 +79,7 @@ describe('MafViewer Plugin E2E', () => {
 
     const pluginLoaded = await page!.evaluate(() => {
       // @ts-expect-error JBrowse global
-      const session = window.__jbrowse_session
+      const session = globalThis.__jbrowse_session
       if (session) {
         const plugins = session.jbrowse?.plugins || []
         return plugins.some(
@@ -89,7 +90,7 @@ describe('MafViewer Plugin E2E', () => {
         )
       }
       const scripts = Array.from(document.querySelectorAll('script'))
-      return scripts.some(s => s.src?.includes('mafviewer'))
+      return scripts.some(s => s.src.includes('mafviewer'))
     })
 
     console.log(`Plugin loaded: ${pluginLoaded}`)
@@ -112,9 +113,9 @@ describe('MafViewer Plugin E2E', () => {
 
     // Hide the header bar which contains a timestamp
     await page!.evaluate(() => {
-      const header = document.querySelector('header')
+      const header = document.querySelector<HTMLElement>('header')
       if (header) {
-        ;(header as HTMLElement).style.display = 'none'
+        header.style.display = 'none'
       }
     })
 
@@ -123,9 +124,9 @@ describe('MafViewer Plugin E2E', () => {
 
     // Restore header
     await page!.evaluate(() => {
-      const header = document.querySelector('header')
+      const header = document.querySelector<HTMLElement>('header')
       if (header) {
-        ;(header as HTMLElement).style.display = ''
+        header.style.display = ''
       }
     })
   }, 30_000)

@@ -104,9 +104,13 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
 
         let formatted: string
         if (singleLineFormat) {
-          const maxLabelLength = Math.max(
-            ...samples.map(s => (s.label ?? s.id).length),
-          )
+          let maxLabelLength = 0
+          for (const s of samples) {
+            const len = (s.label ?? s.id).length
+            if (len > maxLabelLength) {
+              maxLabelLength = len
+            }
+          }
           formatted = fastaSequence
             .map((r, idx) => {
               const sample = samples[idx]!

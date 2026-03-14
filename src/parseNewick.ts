@@ -81,7 +81,7 @@ export default function parseNewick(s: string) {
       case ':': // optional length next
         break
       default: {
-        const x = tokens[i - 1]!
+        const x = i > 0 ? tokens[i - 1] : undefined
         if (x === ')' || x === '(' || x === ',') {
           tree.name = token
         } else if (x === ':') {

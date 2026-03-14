@@ -77,18 +77,14 @@ export function processFeaturesToFasta({
           let insertionSequence = ''
           while (i < alignment.length && seq[i] === '-') {
             const alignChar = alignment[i]!
-            insertionSequence +=
-              alignChar !== '-' && alignChar !== ' '
-                ? alignChar.toLowerCase()
-                : '-'
+            if (alignChar !== '-' && alignChar !== ' ') {
+              insertionSequence += alignChar.toLowerCase()
+            }
             i++
           }
           i--
 
-          // Only add insertion if it contains at least one actual base (not
-          // just gaps). This filters out insertions that only exist in samples
-          // that aren't currently visible.
-          if (insertionSequence.length > 0 && /[^-]/.test(insertionSequence)) {
+          if (insertionSequence.length > 0) {
             const insertPos = leftCoord + o - region.start
             if (insertPos >= 0 && insertPos <= rlen) {
               const existing = insertionsAtPosition.get(insertPos) || []
@@ -150,14 +146,15 @@ function expandWithInsertions(
       const insertionSeq = sampleInsertions.get(sampleIdx)
 
       if (insertionSeq) {
-        // This sample has an insertion - add it, padded with gaps if needed
         const paddedInsertion = insertionSeq.padEnd(maxLen, '-')
-        // Insert after position `pos`
-        rowArray.splice(pos, 0, ...paddedInsertion.split(''))
+        const chars = paddedInsertion.split('')
+        for (let k = chars.length - 1; k >= 0; k--) {
+          rowArray.splice(pos, 0, chars[k]!)
+        }
       } else {
-        // No insertion for this sample - fill with gaps
-        const gaps = new Array(maxLen).fill('-')
-        rowArray.splice(pos, 0, ...gaps)
+        for (let k = 0; k < maxLen; k++) {
+          rowArray.splice(pos, 0, '-')
+        }
       }
     }
   }

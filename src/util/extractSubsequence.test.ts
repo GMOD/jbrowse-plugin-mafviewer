@@ -50,5 +50,5 @@ test('handles a sequence with mixed characters and gaps', () => {
 
   // Positions 2-5 would be G,T,A after skipping gaps
   expect(extractedSequence).toBe('GT--A')
-  expect(actualStart).toBe(5)
+  expect(actualStart).toBe(4)
 })

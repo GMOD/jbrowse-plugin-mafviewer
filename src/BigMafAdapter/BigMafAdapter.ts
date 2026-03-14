@@ -36,12 +36,12 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
   }
 
   async getRefNames() {
-    const { adapter } = await this.setup()
+    const { adapter } = await this.setupPre()
     return adapter.getRefNames()
   }
 
   async getHeader() {
-    const { adapter } = await this.setup()
+    const { adapter } = await this.setupPre()
     return adapter.getHeader()
   }
 

@@ -96,7 +96,7 @@ export default function MultiMAFWidget({ model }: { model: AddTrackModel }) {
             <FormControl>
               <FormLabel>Index type</FormLabel>
               <RadioGroup
-                value={fileTypeChoice}
+                value={indexTypeChoice}
                 onChange={event => {
                   setIndexTypeChoice(event.target.value as IndexTypeOptions)
                 }}

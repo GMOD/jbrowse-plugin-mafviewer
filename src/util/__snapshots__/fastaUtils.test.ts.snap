@@ -16,7 +16,7 @@ exports[`includeInsertions - insertions at multiple positions 1`] = `
 
 exports[`includeInsertions - insertions in multiple samples with different lengths 1`] = `
 [
-  "ac-t-gtac",
+  "act--gtac",
   "actttgtac",
 ]
 `;

@@ -13,7 +13,9 @@ export default tseslint.config(
       'example/*',
       'eslint.config.mjs',
       'esbuild.mjs',
+      'vitest.config.ts',
       'benchmarks/*',
+      'test/*',
     ],
   },
   {
