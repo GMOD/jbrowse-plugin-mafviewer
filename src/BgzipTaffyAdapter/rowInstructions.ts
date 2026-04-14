@@ -66,22 +66,12 @@ export function parseRowInstructions(meta: string) {
 
   for (let i = 0; i < ret.length; ) {
     const type = ret[i++]
-    if (type === 'i') {
+    if (type === 'i' || type === 's') {
       const row = +ret[i++]!
       const sequenceName = ret[i++]!
+      const narrowedType = type
       rows.push({
-        type,
-        row,
-        sequenceName,
-        start: +ret[i++]!,
-        strand: ret[i++] === '-' ? -1 : 1,
-        sequenceLength: +ret[i++]!,
-      })
-    } else if (type === 's') {
-      const row = +ret[i++]!
-      const sequenceName = ret[i++]!
-      rows.push({
-        type,
+        type: narrowedType,
         row,
         sequenceName,
         start: +ret[i++]!,

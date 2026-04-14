@@ -80,7 +80,7 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
       return
     }
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    ;(async () => {
+    (async () => {
       try {
         setLoading(true)
         setError(undefined)

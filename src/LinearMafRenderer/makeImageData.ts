@@ -22,10 +22,6 @@ interface BaseRenderArgs extends RenderArgsDeserialized {
   showAsUpperCase: boolean
 }
 
-interface RenderArgs extends BaseRenderArgs {
-  features: Map<string, Feature>
-}
-
 /**
  * Initialize the rendering context for streaming feature processing.
  * Call this once before processing features.
@@ -140,25 +136,3 @@ export function finalizeRendering(
   }
 }
 
-/**
- * Original non-streaming version for backward compatibility.
- */
-export function makeImageData({
-  ctx,
-  renderArgs,
-}: {
-  ctx: CanvasRenderingContext2D
-  renderArgs: RenderArgs
-}) {
-  const { features, samples, bpPerPx } = renderArgs
-  const { renderingContext, sampleToRowMap, region } = initRenderingContext(
-    ctx,
-    renderArgs,
-  )
-
-  for (const feature of features.values()) {
-    renderFeature(feature, region, bpPerPx, sampleToRowMap, renderingContext)
-  }
-
-  return finalizeRendering(renderingContext, samples)
-}

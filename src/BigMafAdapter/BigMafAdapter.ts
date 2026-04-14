@@ -1,13 +1,11 @@
 import { BaseFeatureDataAdapter } from '@jbrowse/core/data_adapters/BaseAdapter'
-import { openLocation } from '@jbrowse/core/util/io'
 import { ObservableCreate } from '@jbrowse/core/util/rxjs'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
 
 import MafFeature from '../MafFeature'
-import parseNewick from '../parseNewick'
-import { normalize } from '../util'
 import { subscribeToObservable } from '../util/observableUtils'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
+import { getSamplesFromConfig } from '../util/getSamples'
 
 import type { AlignmentRecord, MafAdapterOptions } from '../types'
 import type { Feature, Region } from '@jbrowse/core/util'
@@ -107,18 +105,7 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
   }
 
   async getSamples(_query: Region) {
-    const nhLoc = this.getConf('nhLocation')
-    const nh =
-      nhLoc.uri === '/path/to/my.nh'
-        ? undefined
-        : await openLocation(nhLoc).readFile('utf8')
-
-    // TODO: we may need to resolve the exact set of rows in the visible region
-    // here
-    return {
-      samples: normalize(this.getConf('samples')),
-      tree: nh ? parseNewick(nh) : undefined,
-    }
+    return getSamplesFromConfig(this.getConf.bind(this))
   }
 
   freeResources(): void {}

@@ -8,14 +8,13 @@ import { openLocation } from '@jbrowse/core/util/io'
 import { ObservableCreate } from '@jbrowse/core/util/rxjs'
 
 import VirtualOffset from './virtualOffset'
-import parseNewick from '../parseNewick'
-import { normalize } from '../util'
 import {
   filterFirstLineInstructions,
   parseRowInstructions,
 } from './rowInstructions'
 import MafFeature from '../MafFeature'
 import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
+import { getSamplesFromConfig } from '../util/getSamples'
 
 import type { RowInstruction } from './rowInstructions'
 import type { AlignmentRecord, IndexData } from './types'
@@ -493,16 +492,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   }
 
   async getSamples(_query: Region) {
-    const nhLoc = this.getConf('nhLocation')
-    const nh =
-      nhLoc.uri === '/path/to/my.nh'
-        ? undefined
-        : await openLocation(nhLoc).readFile('utf8')
-
-    return {
-      samples: normalize(this.getConf('samples')),
-      tree: nh ? parseNewick(nh) : undefined,
-    }
+    return getSamplesFromConfig(this.getConf.bind(this))
   }
 
   freeResources(): void {}

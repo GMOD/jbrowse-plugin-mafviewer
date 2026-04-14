@@ -45,36 +45,7 @@ export default tseslint.config(
       ],
 
       'import/no-unresolved': 'off',
-      'import/order': [
-        'error',
-        {
-          named: true,
-          'newlines-between': 'always',
-          alphabetize: {
-            order: 'asc',
-          },
-          groups: [
-            'builtin',
-            ['external', 'internal'],
-            ['parent', 'sibling', 'index', 'object'],
-            'type',
-          ],
-          pathGroups: [
-            {
-              group: 'builtin',
-              pattern: 'react',
-              position: 'before',
-            },
-            {
-              group: 'external',
-              pattern: '@mui/icons-material',
-              position: 'after',
-            },
-          ],
-
-          pathGroupsExcludedImportTypes: ['react'],
-        },
-      ],
+      'import/order': 'off',
       semi: ['error', 'never'],
       'no-empty': 'off',
       'no-console': [
