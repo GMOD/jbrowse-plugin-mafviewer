@@ -2,6 +2,8 @@ import { openLocation } from '@jbrowse/core/util/io'
 import parseNewick from '../parseNewick'
 import { normalize } from '../util'
 
+type SampleConfig = string[] | { id: string; label?: string; color?: string }[]
+
 export async function getSamplesFromConfig(
   getConf: (key: string) => unknown,
 ) {
@@ -19,11 +21,7 @@ export async function getSamplesFromConfig(
       )
 
   return {
-    samples: normalize(
-      getConf('samples') as
-        | string[]
-        | { id: string; label?: string; color?: string }[],
-    ),
+    samples: normalize(getConf('samples') as SampleConfig),
     tree: nh ? parseNewick(nh) : undefined,
   }
 }

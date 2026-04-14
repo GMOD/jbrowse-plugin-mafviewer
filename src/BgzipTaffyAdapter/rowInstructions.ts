@@ -67,17 +67,14 @@ export function parseRowInstructions(meta: string) {
   for (let i = 0; i < ret.length; ) {
     const type = ret[i++]
     if (type === 'i' || type === 's') {
-      const row = +ret[i++]!
-      const sequenceName = ret[i++]!
-      const narrowedType = type
       rows.push({
-        type: narrowedType,
-        row,
-        sequenceName,
+        type,
+        row: +ret[i++]!,
+        sequenceName: ret[i++]!,
         start: +ret[i++]!,
         strand: ret[i++] === '-' ? -1 : 1,
         sequenceLength: +ret[i++]!,
-      })
+      } as RowInsert | RowSubstitute)
     } else if (type === 'd') {
       rows.push({
         type,

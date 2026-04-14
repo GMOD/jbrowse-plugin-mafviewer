@@ -9,6 +9,7 @@ import { getSamplesFromConfig } from '../util/getSamples'
 
 import type { AlignmentRecord, MafAdapterOptions } from '../types'
 import type { Feature, Region } from '@jbrowse/core/util'
+
 export default class BigMafAdapter extends BaseFeatureDataAdapter {
   public setupP?: Promise<{ adapter: BaseFeatureDataAdapter }>
 
