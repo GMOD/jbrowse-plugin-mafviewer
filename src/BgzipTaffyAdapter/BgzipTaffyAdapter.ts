@@ -50,7 +50,9 @@ interface TafFeature {
   seq: string
 }
 
-// Binary search to find the index of the first element >= target
+/**
+ * Binary search to find the index of the first element >= target
+ */
 function lowerBound<T>(arr: T[], target: number, getKey: (item: T) => number) {
   let lo = 0
   let hi = arr.length
@@ -65,6 +67,12 @@ function lowerBound<T>(arr: T[], target: number, getKey: (item: T) => number) {
   return lo
 }
 
+/**
+ * Adapter for TAF (Taffy Alignment Format) files compressed with BGZIP
+ * Implements streaming parsing of TAF blocks into MAF features
+ *
+ * TAF Format: https://github.com/ComparativeGenomicsToolkit/taffy
+ */
 export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   public setupP?: Promise<SetupData>
 
