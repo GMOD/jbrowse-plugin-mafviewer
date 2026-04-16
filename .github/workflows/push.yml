@@ -14,10 +14,10 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: latest
-      - name: Use Node.js 22.x
+      - name: Use Node.js 24.x
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Build
@@ -30,12 +30,17 @@ jobs:
     needs: build-and-lint
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 22.x
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+      - name: Use Node.js 24.x
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
-      - name: Install deps (with cache)
-        uses: bahmutov/npm-install@v1
+          node-version: 24.x
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Puppeteer Chrome
+        run: npx puppeteer browsers install chrome
       - name: Install JBrowse CLI
         run: npm install -g @jbrowse/cli
       - name: Setup JBrowse nightly
