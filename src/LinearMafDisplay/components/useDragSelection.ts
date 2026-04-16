@@ -124,7 +124,15 @@ export function useDragSelection(
       }
       setIsDragging(false)
     },
-    [ref, isDragging, dragStartX, dragEndX, dragStartY, dragEndY, clearSelectionBox],
+    [
+      ref,
+      isDragging,
+      dragStartX,
+      dragEndX,
+      dragStartY,
+      dragEndY,
+      clearSelectionBox,
+    ],
   )
 
   const handleMouseLeave = useCallback(() => {

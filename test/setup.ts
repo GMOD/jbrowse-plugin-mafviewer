@@ -187,7 +187,9 @@ export async function startJBrowseServer() {
       const str = data.toString()
       console.log(`[jbrowse-server] ${str}`)
 
-      const match = /Accepting connections at http:\/\/localhost:(\d+)/.exec(str)
+      const match = /Accepting connections at http:\/\/localhost:(\d+)/.exec(
+        str,
+      )
       if (match) {
         const actualPort = Number.parseInt(match[1], 10)
         if (actualPort !== JBROWSE_PORT) {

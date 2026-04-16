@@ -4,9 +4,7 @@ import { normalize } from '../util'
 
 type SampleConfig = string[] | { id: string; label?: string; color?: string }[]
 
-export async function getSamplesFromConfig(
-  getConf: (key: string) => unknown,
-) {
+export async function getSamplesFromConfig(getConf: (key: string) => unknown) {
   const nhLoc = getConf('nhLocation')
   const isDefaultPath =
     nhLoc &&

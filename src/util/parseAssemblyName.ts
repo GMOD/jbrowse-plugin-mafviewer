@@ -83,7 +83,11 @@ export function selectReferenceSequenceString(
   queryAssemblyName: string | undefined,
   firstAssemblyNameFound: string | undefined,
 ): string | undefined {
-  for (const name of [refAssemblyName, queryAssemblyName, firstAssemblyNameFound]) {
+  for (const name of [
+    refAssemblyName,
+    queryAssemblyName,
+    firstAssemblyNameFound,
+  ]) {
     if (name && alignments[name]) {
       return alignments[name].seq
     }

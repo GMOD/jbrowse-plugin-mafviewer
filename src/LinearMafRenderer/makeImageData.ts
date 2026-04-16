@@ -135,4 +135,3 @@ export function finalizeRendering(
     samples,
   }
 }
-
