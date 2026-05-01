@@ -67,7 +67,7 @@ export function generateTooltipContent(
 // basically same as maxLength from https://observablehq.com/@d3/tree-of-life
 export function maxLength(d: HierarchyNode<NodeWithIds>): number {
   return (
-    (d.data.length || 0) + (d.children ? max(d.children, maxLength) || 0 : 0)
+    (d.data.length ?? 0) + (d.children ? max(d.children, maxLength) ?? 0 : 0)
   )
 }
 
@@ -77,7 +77,7 @@ export function setBrLength(
   y0: number,
   k: number,
 ) {
-  const newY0 = y0 + Math.max(d.data.length || 0, 0)
+  const newY0 = y0 + Math.max(d.data.length ?? 0, 0)
   // @ts-expect-error
   d.len = newY0 * k
 

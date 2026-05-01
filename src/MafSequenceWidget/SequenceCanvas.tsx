@@ -109,7 +109,7 @@ export default function SequenceCanvas({
         }
 
         if (colIdx === hoveredCol) {
-          const highlight = (theme.palette as any).highlight as
+          const highlight = (theme.palette as unknown as Record<string, unknown>).highlight as
             | { main: string }
             | undefined
           const highlightColor = highlight?.main ?? '#FFB11D'

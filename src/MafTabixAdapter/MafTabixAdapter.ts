@@ -34,7 +34,7 @@ export default class MafTabixAdapter extends BaseFeatureDataAdapter {
   }
 
   async setupPre(opts?: BaseOptions) {
-    const { statusCallback = () => {} } = opts || {}
+    const { statusCallback = () => {} } = opts ?? {}
     if (!this.setupP) {
       this.setupP = updateStatus('Downloading index', statusCallback, () =>
         this.setup(),

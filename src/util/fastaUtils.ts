@@ -87,7 +87,7 @@ export function processFeaturesToFasta({
           if (insertionSequence.length > 0) {
             const insertPos = leftCoord + o - region.start
             if (insertPos >= 0 && insertPos <= rlen) {
-              const existing = insertionsAtPosition.get(insertPos) || []
+              const existing = insertionsAtPosition.get(insertPos) ?? []
               existing.push({ sequence: insertionSequence, sampleIndex: row })
               insertionsAtPosition.set(insertPos, existing)
             }
@@ -147,9 +147,8 @@ function expandWithInsertions(
 
       if (insertionSeq) {
         const paddedInsertion = insertionSeq.padEnd(maxLen, '-')
-        const chars = paddedInsertion.split('')
-        for (let k = chars.length - 1; k >= 0; k--) {
-          rowArray.splice(pos, 0, chars[k]!)
+        for (let k = paddedInsertion.length - 1; k >= 0; k--) {
+          rowArray.splice(pos, 0, paddedInsertion[k]!)
         }
       } else {
         for (let k = 0; k < maxLen; k++) {

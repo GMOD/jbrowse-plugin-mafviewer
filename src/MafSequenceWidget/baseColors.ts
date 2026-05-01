@@ -8,69 +8,67 @@ interface BasePalette {
 }
 
 function getBases(theme: Theme): BasePalette | undefined {
-  return (theme.palette as any).bases as BasePalette | undefined
+  return (theme.palette as unknown as Record<string, unknown>).bases as BasePalette | undefined
+}
+
+function getBaseKey(base: string): keyof BasePalette | undefined {
+  switch (base.toUpperCase()) {
+    case 'A':
+      return 'A'
+    case 'C':
+      return 'C'
+    case 'G':
+      return 'G'
+    case 'T':
+    case 'U':
+      return 'T'
+    default:
+      return undefined
+  }
 }
 
 export function getBaseColor(base: string, theme: Theme): string {
   const bases = getBases(theme)
-  if (!bases) {
-    switch (base.toUpperCase()) {
-      case 'A':
-        return '#6dbf6d'
-      case 'C':
-        return '#6c6cff'
-      case 'G':
-        return '#ffb347'
-      case 'T':
-      case 'U':
-        return '#ff6b6b'
-      default:
-        return theme.palette.grey[500]
-    }
+  const key = getBaseKey(base)
+
+  if (!key) {
+    return theme.palette.grey[500]
   }
 
-  switch (base.toUpperCase()) {
+  if (bases) {
+    return bases[key].main
+  }
+
+  switch (key) {
     case 'A':
-      return bases.A.main
+      return '#6dbf6d'
     case 'C':
-      return bases.C.main
+      return '#6c6cff'
     case 'G':
-      return bases.G.main
+      return '#ffb347'
     case 'T':
-    case 'U':
-      return bases.T.main
-    default:
-      return theme.palette.grey[500]
+      return '#ff6b6b'
   }
 }
 
 export function getContrastText(base: string, theme: Theme): string {
   const bases = getBases(theme)
-  if (!bases) {
-    switch (base.toUpperCase()) {
-      case 'A':
-      case 'C':
-      case 'T':
-      case 'U':
-        return '#fff'
-      case 'G':
-        return '#000'
-      default:
-        return theme.palette.common.white
-    }
+  const key = getBaseKey(base)
+
+  if (!key) {
+    return theme.palette.common.white
   }
 
-  switch (base.toUpperCase()) {
+  if (bases) {
+    return bases[key].contrastText
+  }
+
+  switch (key) {
     case 'A':
-      return bases.A.contrastText
     case 'C':
-      return bases.C.contrastText
-    case 'G':
-      return bases.G.contrastText
     case 'T':
-    case 'U':
-      return bases.T.contrastText
-    default:
-      return theme.palette.common.white
+      return '#fff'
+    case 'G':
+      return '#000'
   }
 }
