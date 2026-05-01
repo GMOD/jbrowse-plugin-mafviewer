@@ -109,10 +109,7 @@ export default function SequenceCanvas({
         }
 
         if (colIdx === hoveredCol) {
-          const highlight = (theme.palette as unknown as Record<string, unknown>).highlight as
-            | { main: string }
-            | undefined
-          const highlightColor = highlight?.main ?? '#FFB11D'
+          const highlightColor = theme.palette.highlight?.main ?? '#FFB11D'
           ctx.fillStyle = alpha(highlightColor, 0.5)
           ctx.fillRect(x, y, CHAR_WIDTH, ROW_HEIGHT)
         }
