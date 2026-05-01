@@ -109,6 +109,7 @@ export default function SequenceCanvas({
         }
 
         if (colIdx === hoveredCol) {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           const highlightColor = theme.palette.highlight?.main ?? '#FFB11D'
           ctx.fillStyle = alpha(highlightColor, 0.5)
           ctx.fillRect(x, y, CHAR_WIDTH, ROW_HEIGHT)
