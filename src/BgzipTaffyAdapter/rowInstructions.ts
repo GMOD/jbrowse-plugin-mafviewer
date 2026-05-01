@@ -90,7 +90,7 @@ export function parseRowInstructions(meta: string) {
         start: +ret[i++]!,
         strand: ret[i++] === '-' ? -1 : 1,
         sequenceLength: +ret[i++]!,
-      } as RowInsert | RowSubstitute)
+      })
     } else if (type === 'd') {
       rows.push({
         type,

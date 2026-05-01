@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "target": "esnext",
     "outDir": "dist",
     "module": "esnext",
     "lib": ["dom", "esnext"],
+    "types": ["node"],
     "importHelpers": true,
     "declaration": true,
     "sourceMap": true,

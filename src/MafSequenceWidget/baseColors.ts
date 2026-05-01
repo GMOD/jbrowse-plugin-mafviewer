@@ -8,7 +8,7 @@ interface BasePalette {
 }
 
 function getBases(theme: Theme): BasePalette | undefined {
-  return theme.palette.bases as BasePalette | undefined
+  return theme.palette.bases
 }
 
 function getBaseKey(base: string): keyof BasePalette | undefined {
