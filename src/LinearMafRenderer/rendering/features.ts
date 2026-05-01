@@ -1,4 +1,4 @@
-import { Feature, featureSpanPx } from '@jbrowse/core/util'
+import { featureSpanPx } from '@jbrowse/core/util'
 
 import { renderGaps } from './gaps'
 import { renderInsertions } from './insertions'
@@ -7,6 +7,7 @@ import { renderMismatches } from './mismatches'
 import { renderText } from './text'
 
 import type { AlignmentRecord, GenomicRegion, RenderingContext } from './types'
+import type { Feature } from '@jbrowse/core/util'
 
 export function processFeatureAlignment(
   feature: Feature,

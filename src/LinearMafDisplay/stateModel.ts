@@ -2,7 +2,6 @@ import { lazy } from 'react'
 
 import { ConfigurationReference, getConf } from '@jbrowse/core/configuration'
 import {
-  SessionWithWidgets,
   getContainingTrack,
   getContainingView,
   getEnv,
@@ -26,7 +25,9 @@ import type {
   AnyConfigurationModel,
   AnyConfigurationSchemaType,
 } from '@jbrowse/core/configuration'
+import type { SessionWithWidgets } from '@jbrowse/core/util'
 import type { Instance } from '@jbrowse/mobx-state-tree'
+import type LinearGenomeViewPlugin from '@jbrowse/plugin-linear-genome-view'
 import type { ExportSvgDisplayOptions } from '@jbrowse/plugin-linear-genome-view'
 import type { HierarchyNode } from 'd3-hierarchy'
 
@@ -53,7 +54,7 @@ export default function stateModelFactory(
 ) {
   const LinearGenomePlugin = pluginManager.getPlugin(
     'LinearGenomeViewPlugin',
-  ) as import('@jbrowse/plugin-linear-genome-view').default
+  ) as LinearGenomeViewPlugin
   const { BaseLinearDisplay } = LinearGenomePlugin.exports
 
   return types
@@ -454,9 +455,8 @@ export default function stateModelFactory(
     }))
     .views(self => {
       const {
-        // eslint-disable-next-line @typescript-eslint/unbound-method
         trackMenuItems: superTrackMenuItems,
-        // eslint-disable-next-line @typescript-eslint/unbound-method
+
         renderProps: superRenderProps,
       } = self
       return {
@@ -674,7 +674,6 @@ export default function stateModelFactory(
       },
     }))
     .actions(self => {
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       const { renderSvg: superRenderSvg } = self
       return {
         /**

@@ -1,10 +1,12 @@
-import PluginManager from '@jbrowse/core/PluginManager'
 import { ConfigurationSchema } from '@jbrowse/core/configuration'
+
+import type PluginManager from '@jbrowse/core/PluginManager'
+import type LinearGenomeViewPlugin from '@jbrowse/plugin-linear-genome-view'
 
 export default function configSchemaF(pluginManager: PluginManager) {
   const LinearGenomePlugin = pluginManager.getPlugin(
     'LinearGenomeViewPlugin',
-  ) as import('@jbrowse/plugin-linear-genome-view').default
+  ) as LinearGenomeViewPlugin
   const { baseLinearDisplayConfigSchema } = LinearGenomePlugin.exports
   return ConfigurationSchema(
     'LinearMafDisplay',

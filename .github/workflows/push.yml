@@ -42,11 +42,11 @@ jobs:
       - name: Install Puppeteer Chrome
         run: npx puppeteer browsers install chrome
       - name: Install JBrowse CLI
-        run: npm install -g @jbrowse/cli
+        run: pnpm install -g @jbrowse/cli
       - name: Setup JBrowse nightly
         run: jbrowse create .test-jbrowse-nightly --nightly
       - name: Run E2E tests
-        run: TEST_JBROWSE_VERSION=nightly yarn vitest run test/
+        run: TEST_JBROWSE_VERSION=nightly pnpm vitest run test/
       - name: Upload screenshots on failure
         if: failure()
         uses: actions/upload-artifact@v4

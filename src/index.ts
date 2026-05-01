@@ -1,5 +1,4 @@
 import Plugin from '@jbrowse/core/Plugin'
-import PluginManager from '@jbrowse/core/PluginManager'
 
 import BgzipTaffyAdapterF from './BgzipTaffyAdapter'
 import BigMafAdapterF from './BigMafAdapter'
@@ -12,6 +11,8 @@ import MafSequenceWidgetF from './MafSequenceWidget'
 import MafTabixAdapterF from './MafTabixAdapter'
 import MafTrackF from './MafTrack'
 import { version } from './version'
+
+import type PluginManager from '@jbrowse/core/PluginManager'
 
 export default class MafViewerPlugin extends Plugin {
   name = 'MafViewerPlugin'

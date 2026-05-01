@@ -1,16 +1,13 @@
-import { RenderArgsDeserialized } from '@jbrowse/core/pluggableElementTypes/renderers/BoxRendererType'
 import { createJBrowseTheme } from '@jbrowse/core/ui'
-import { Feature, Region } from '@jbrowse/core/util'
 import Flatbush from 'flatbush'
 
-import {
-  FONT_CONFIG,
-  RenderingContext,
-  processFeatureAlignment,
-} from './rendering'
+import { FONT_CONFIG, processFeatureAlignment } from './rendering'
 import { getCharWidthHeight, getColorBaseMap, getContrastBaseMap } from './util'
 
+import type { RenderingContext } from './rendering'
 import type { Sample } from '../types'
+import type { RenderArgsDeserialized } from '@jbrowse/core/pluggableElementTypes/renderers/BoxRendererType'
+import type { Feature, Region } from '@jbrowse/core/util'
 
 interface BaseRenderArgs extends RenderArgsDeserialized {
   samples: Sample[]

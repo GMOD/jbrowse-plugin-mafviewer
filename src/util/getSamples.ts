@@ -1,4 +1,5 @@
 import { openLocation } from '@jbrowse/core/util/io'
+
 import parseNewick from '../parseNewick'
 import { normalize } from '../util'
 

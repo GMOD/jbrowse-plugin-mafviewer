@@ -1,24 +1,23 @@
 import { unzip } from '@gmod/bgzf-filehandle'
-import {
-  BaseFeatureDataAdapter,
-  BaseOptions,
-} from '@jbrowse/core/data_adapters/BaseAdapter'
-import { Feature, Region, updateStatus } from '@jbrowse/core/util'
+import { BaseFeatureDataAdapter } from '@jbrowse/core/data_adapters/BaseAdapter'
+import { updateStatus } from '@jbrowse/core/util'
 import { openLocation } from '@jbrowse/core/util/io'
 import { ObservableCreate } from '@jbrowse/core/util/rxjs'
 
-import VirtualOffset from './virtualOffset'
 import {
   filterFirstLineInstructions,
   parseRowInstructions,
 } from './rowInstructions'
+import VirtualOffset from './virtualOffset'
 import MafFeature from '../MafFeature'
-import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
 import { getSamplesFromConfig } from '../util/getSamples'
+import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
 
 import type { RowInstruction } from './rowInstructions'
 import type { AlignmentRecord, IndexData } from './types'
 import type { MafAdapterOptions } from '../types'
+import type { BaseOptions } from '@jbrowse/core/data_adapters/BaseAdapter'
+import type { Feature, Region } from '@jbrowse/core/util'
 
 // Represents a row in the alignment (like Alignment_Row in C)
 interface RowState {

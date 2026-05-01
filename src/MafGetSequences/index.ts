@@ -1,6 +1,6 @@
-import PluginManager from '@jbrowse/core/PluginManager'
-
 import MafGetSequences from './MafGetSequences'
+
+import type PluginManager from '@jbrowse/core/PluginManager'
 
 export default function MafGetSequencesF(pluginManager: PluginManager) {
   pluginManager.addRpcMethod(() => {

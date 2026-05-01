@@ -14,7 +14,7 @@ export default function MafSequenceWidgetF(pluginManager: PluginManager) {
       new WidgetType({
         name: 'MafSequenceWidget',
         heading: 'MAF Sequence',
-        configSchema: configSchema,
+        configSchema,
         stateModel: stateModelFactory(),
         ReactComponent: lazy(() => import('./MafSequenceWidget')),
       }),

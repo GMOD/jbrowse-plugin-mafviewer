@@ -1,10 +1,11 @@
-import PluginManager from '@jbrowse/core/PluginManager'
 import {
   TrackType,
   createBaseTrackModel,
 } from '@jbrowse/core/pluggableElementTypes'
 
 import configSchemaF from './configSchema'
+
+import type PluginManager from '@jbrowse/core/PluginManager'
 
 export default function MafTrackF(pluginManager: PluginManager) {
   return pluginManager.addTrackType(() => {

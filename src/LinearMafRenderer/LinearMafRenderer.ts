@@ -1,12 +1,6 @@
 import { getAdapter } from '@jbrowse/core/data_adapters/dataAdapterCache'
 import { FeatureRendererType } from '@jbrowse/core/pluggableElementTypes'
-import { RenderArgsDeserialized } from '@jbrowse/core/pluggableElementTypes/renderers/BoxRendererType'
-import {
-  Feature,
-  Region,
-  createCanvas,
-  createImageBitmap,
-} from '@jbrowse/core/util'
+import { createCanvas, createImageBitmap } from '@jbrowse/core/util'
 
 import {
   finalizeRendering,
@@ -17,6 +11,8 @@ import { subscribeToObservable } from '../util/observableUtils'
 
 import type { Sample } from '../types'
 import type { BaseFeatureDataAdapter } from '@jbrowse/core/data_adapters/BaseAdapter'
+import type { RenderArgsDeserialized } from '@jbrowse/core/pluggableElementTypes/renderers/BoxRendererType'
+import type { Feature, Region } from '@jbrowse/core/util'
 
 interface RenderArgs extends RenderArgsDeserialized {
   samples: Sample[]

@@ -17,6 +17,7 @@ import YScaleBars from './Sidebar/YScaleBars'
 import { useDragSelection } from './useDragSelection'
 
 import type { LinearMafDisplayModel } from '../stateModel'
+import type LinearGenomeViewPlugin from '@jbrowse/plugin-linear-genome-view'
 import type { LinearGenomeViewModel } from '@jbrowse/plugin-linear-genome-view'
 
 const LinearMafDisplay = observer(function (props: {
@@ -31,7 +32,7 @@ const LinearMafDisplay = observer(function (props: {
 
   const LinearGenomePlugin = pluginManager.getPlugin(
     'LinearGenomeViewPlugin',
-  ) as import('@jbrowse/plugin-linear-genome-view').default
+  ) as LinearGenomeViewPlugin
   const { BaseLinearDisplayComponent } = LinearGenomePlugin.exports
 
   const {

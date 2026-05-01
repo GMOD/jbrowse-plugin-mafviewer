@@ -1,20 +1,19 @@
-import {
-  BaseFeatureDataAdapter,
-  BaseOptions,
-} from '@jbrowse/core/data_adapters/BaseAdapter'
-import { Feature, Region, updateStatus } from '@jbrowse/core/util'
+import { BaseFeatureDataAdapter } from '@jbrowse/core/data_adapters/BaseAdapter'
+import { updateStatus } from '@jbrowse/core/util'
 import { ObservableCreate } from '@jbrowse/core/util/rxjs'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
 
 import MafFeature from '../MafFeature'
+import { getSamplesFromConfig } from '../util/getSamples'
 import { subscribeToObservable } from '../util/observableUtils'
 import {
   parseAssemblyAndChr,
   selectReferenceSequenceString,
 } from '../util/parseAssemblyName'
-import { getSamplesFromConfig } from '../util/getSamples'
 
 import type { AlignmentRecord, MafAdapterOptions } from '../types'
+import type { BaseOptions } from '@jbrowse/core/data_adapters/BaseAdapter'
+import type { Feature, Region } from '@jbrowse/core/util'
 
 export default class MafTabixAdapter extends BaseFeatureDataAdapter {
   public setupP?: Promise<{ adapter: BaseFeatureDataAdapter }>

@@ -60,7 +60,7 @@ const Tree = observer(function ({ model }: { model: LinearMafDisplayModel }) {
       }
     }
     return handlers
-  }, [model, hierarchy, nodeDescendantNames, treeAreaWidth])
+  }, [model, hierarchy, nodeDescendantNames])
 
   return (
     <>
