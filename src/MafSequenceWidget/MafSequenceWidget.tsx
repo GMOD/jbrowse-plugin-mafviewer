@@ -79,8 +79,7 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
     if (!adapterConfig || !samples || !regions) {
       return
     }
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    ;(async () => {
+    void (async () => {
       try {
         setLoading(true)
         setError(undefined)
@@ -283,8 +282,6 @@ const MafSequenceWidget = observer(function MafSequenceWidget({
             <SequenceDisplay
               model={model}
               sequences={rawSequences}
-              singleLineFormat={singleLineFormat}
-              includeInsertions={includeInsertions}
               colorBackground={colorBackground}
               showSampleNames={showSampleNames}
             />

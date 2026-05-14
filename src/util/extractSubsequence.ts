@@ -3,7 +3,7 @@ export function extractSubsequence(
   relativeStart: number,
   relativeEnd: number,
 ): { extractedSequence: string; actualStart: number } {
-  if (sequence.split('').every(char => char === '-')) {
+  if (!/[^-]/.test(sequence)) {
     return {
       extractedSequence: sequence,
       actualStart: 0,

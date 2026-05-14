@@ -57,7 +57,7 @@ const LinearMafRendering = observer(function (props: {
       return {
         ...item,
         sampleId: sample?.id ?? 'unknown',
-        sampleLabel: sample?.label || sample?.id || 'unknown',
+        sampleLabel: sample?.label ?? sample?.id ?? 'unknown',
       }
     },
     [flatbush2, items, samples],

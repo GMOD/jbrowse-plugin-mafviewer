@@ -249,22 +249,6 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     }
   }
 
-  // Non-streaming version for backward compatibility (used in tests)
-  parseTafBlocks(
-    buffer: Uint8Array,
-    runLengthEncodeBases: boolean,
-    _opts?: BaseOptions,
-    sampleFilter?: Set<string>,
-  ): TafFeature[] {
-    return [
-      ...this.parseTafBlocksStreaming(
-        buffer,
-        runLengthEncodeBases,
-        sampleFilter,
-      ),
-    ]
-  }
-
   // TextDecoder for efficient string building from typed array
   private decoder = new TextDecoder('ascii')
 
@@ -341,7 +325,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   }
 
   setup(opts?: BaseOptions) {
-    const { statusCallback = () => {} } = opts || {}
+    const { statusCallback = () => {} } = opts ?? {}
     return updateStatus('Downloading index', statusCallback, () =>
       this.setupPre(),
     )
@@ -379,7 +363,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     const lines = text
       .split('\n')
       .map(f => f.trim())
-      .filter(line => !!line)
+      .filter(line => line !== '')
     const entries = {} as IndexData
     let lastChr = ''
     let lastChrStart = 0
@@ -414,7 +398,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   }
 
   getFeatures(query: Region, opts?: MafAdapterOptions) {
-    const { statusCallback = () => {} } = opts || {}
+    const { statusCallback = () => {} } = opts ?? {}
     return ObservableCreate<Feature>(async observer => {
       try {
         const { index, runLengthEncodeBases } = await this.setup(opts)

@@ -2,9 +2,10 @@ import React, { useCallback, useMemo } from 'react'
 
 import { observer } from 'mobx-react'
 
+import { descendants, links } from '../../hierarchy'
+
+import type { HierarchyNode } from '../../hierarchy'
 import type { LinearMafDisplayModel } from '../../stateModel'
-import type { NodeWithIdsAndLength } from '../../types'
-import type { HierarchyNode } from 'd3-hierarchy'
 
 const hitboxStyle = {
   pointerEvents: 'all',
@@ -30,14 +31,14 @@ const Tree = observer(function ({ model }: { model: LinearMafDisplayModel }) {
 
   const nodeHandlers = useMemo(() => {
     const handlers = new Map<
-      HierarchyNode<NodeWithIdsAndLength>,
+      HierarchyNode,
       {
         onMouseEnter: () => void
         onClick: (event: React.MouseEvent) => void
       }
     >()
     if (hierarchy) {
-      for (const node of hierarchy.descendants()) {
+      for (const node of descendants(hierarchy)) {
         const names = nodeDescendantNames.get(node)
         handlers.set(node, {
           onMouseEnter: () => {
@@ -65,13 +66,11 @@ const Tree = observer(function ({ model }: { model: LinearMafDisplayModel }) {
   return (
     <>
       {hierarchy
-        ? [...hierarchy.links()].map(link => {
+        ? links(hierarchy).map(link => {
             const { source, target } = link
             const sy = source.x!
             const ty = target.x!
-            // @ts-expect-error
             const tx = showBranchLen ? target.len : target.y
-            // @ts-expect-error
             const sx = showBranchLen ? source.len : source.y
 
             const sourceHandlers = nodeHandlers.get(source)

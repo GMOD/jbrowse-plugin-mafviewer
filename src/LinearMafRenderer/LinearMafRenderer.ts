@@ -2,11 +2,8 @@ import { getAdapter } from '@jbrowse/core/data_adapters/dataAdapterCache'
 import { FeatureRendererType } from '@jbrowse/core/pluggableElementTypes'
 import { createCanvas, createImageBitmap } from '@jbrowse/core/util'
 
-import {
-  finalizeRendering,
-  initRenderingContext,
-  renderFeature,
-} from './makeImageData'
+import { finalizeRendering, initRenderingContext } from './makeImageData'
+import { processFeatureAlignment } from './rendering'
 import { subscribeToObservable } from '../util/observableUtils'
 
 import type { Sample } from '../types'
@@ -104,7 +101,7 @@ export default class LinearMafRenderer extends FeatureRendererType {
       adapter.getFeatures(queryRegion, renderProps),
       (feature: Feature) => {
         if (this.featurePassesFilters(renderProps, feature)) {
-          renderFeature(
+          processFeatureAlignment(
             feature,
             expandedRegion,
             bpPerPx,

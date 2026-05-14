@@ -1,13 +1,13 @@
 import { createJBrowseTheme } from '@jbrowse/core/ui'
 import Flatbush from 'flatbush'
 
-import { FONT_CONFIG, processFeatureAlignment } from './rendering'
+import { FONT_CONFIG } from './rendering'
 import { getCharWidthHeight, getColorBaseMap, getContrastBaseMap } from './util'
 
 import type { RenderingContext } from './rendering'
 import type { Sample } from '../types'
 import type { RenderArgsDeserialized } from '@jbrowse/core/pluggableElementTypes/renderers/BoxRendererType'
-import type { Feature, Region } from '@jbrowse/core/util'
+import type { Region } from '@jbrowse/core/util'
 
 interface BaseRenderArgs extends RenderArgsDeserialized {
   samples: Sample[]
@@ -79,25 +79,6 @@ export function initRenderingContext(
   }
 
   return { renderingContext, sampleToRowMap, region }
-}
-
-/**
- * Render a single feature to the canvas. Call this for each feature as it streams in.
- */
-export function renderFeature(
-  feature: Feature,
-  region: Region,
-  bpPerPx: number,
-  sampleToRowMap: Map<string, number>,
-  renderingContext: RenderingContext,
-) {
-  processFeatureAlignment(
-    feature,
-    region,
-    bpPerPx,
-    sampleToRowMap,
-    renderingContext,
-  )
 }
 
 /**

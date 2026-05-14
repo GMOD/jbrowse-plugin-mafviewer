@@ -55,8 +55,6 @@ const useStyles = makeStyles()(theme => ({
 interface SequenceDisplayProps {
   model: MafSequenceWidgetModel
   sequences: string[]
-  singleLineFormat: boolean
-  includeInsertions: boolean
   colorBackground: boolean
   showSampleNames: boolean
 }
