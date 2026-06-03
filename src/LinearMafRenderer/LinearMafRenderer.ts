@@ -1,15 +1,22 @@
 import { getAdapter } from '@jbrowse/core/data_adapters/dataAdapterCache'
 import { FeatureRendererType } from '@jbrowse/core/pluggableElementTypes'
-import { createCanvas, createImageBitmap } from '@jbrowse/core/util'
+import { RenderArgsDeserialized } from '@jbrowse/core/pluggableElementTypes/renderers/BoxRendererType'
+import {
+  Feature,
+  Region,
+  createCanvas,
+  createImageBitmap,
+} from '@jbrowse/core/util'
 
-import { finalizeRendering, initRenderingContext } from './makeImageData'
-import { processFeatureAlignment } from './rendering'
+import {
+  finalizeRendering,
+  initRenderingContext,
+  renderFeature,
+} from './makeImageData'
 import { subscribeToObservable } from '../util/observableUtils'
 
 import type { Sample } from '../types'
 import type { BaseFeatureDataAdapter } from '@jbrowse/core/data_adapters/BaseAdapter'
-import type { RenderArgsDeserialized } from '@jbrowse/core/pluggableElementTypes/renderers/BoxRendererType'
-import type { Feature, Region } from '@jbrowse/core/util'
 
 interface RenderArgs extends RenderArgsDeserialized {
   samples: Sample[]
@@ -101,7 +108,7 @@ export default class LinearMafRenderer extends FeatureRendererType {
       adapter.getFeatures(queryRegion, renderProps),
       (feature: Feature) => {
         if (this.featurePassesFilters(renderProps, feature)) {
-          processFeatureAlignment(
+          renderFeature(
             feature,
             expandedRegion,
             bpPerPx,

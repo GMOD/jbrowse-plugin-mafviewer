@@ -3,9 +3,12 @@ import { ObservableCreate } from '@jbrowse/core/util/rxjs'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
 
 import MafFeature from '../MafFeature'
-import { getSamplesFromConfig } from '../util/getSamples'
 import { subscribeToObservable } from '../util/observableUtils'
-import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
+import {
+  matchSampleId,
+  parseAssemblyAndChrSimple,
+} from '../util/parseAssemblyName'
+import { getSamplesFromConfig } from '../util/getSamples'
 
 import type { AlignmentRecord, MafAdapterOptions } from '../types'
 import type { Feature, Region } from '@jbrowse/core/util'
@@ -50,7 +53,7 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
     return ObservableCreate<Feature>(async observer => {
       const { adapter } = await this.setupPre()
 
-      const sampleFilter = opts?.samples
+      const sampleIds = opts?.samples
         ? new Set(opts.samples.map(s => s.id))
         : undefined
 
@@ -66,24 +69,25 @@ export default class BigMafAdapter extends BaseFeatureDataAdapter {
             const sequence = parts[6]!
             const organismChr = parts[1]!
 
-            const { assemblyName: org, chr } =
-              parseAssemblyAndChrSimple(organismChr)
-
             if (referenceSeq === undefined) {
               referenceSeq = sequence
             }
 
-            if (sampleFilter && !sampleFilter.has(org)) {
-              continue
-            }
+            // Known set → resolve the token against it so haplotype-suffixed
+            // names (`Species1.1`) match exactly. No set → dot-position split.
+            const parsed = sampleIds
+              ? matchSampleId(organismChr, sampleIds)
+              : parseAssemblyAndChrSimple(organismChr)
 
-            alignments[org] = {
-              chr,
-              start: +parts[2]!,
-              srcSize: +parts[3]!,
-              strand: parts[4] === '+' ? 1 : -1,
-              unknown: +parts[5]!,
-              seq: sequence,
+            if (parsed?.assemblyName) {
+              alignments[parsed.assemblyName] = {
+                chr: parsed.chr,
+                start: +parts[2]!,
+                srcSize: +parts[3]!,
+                strand: parts[4] === '+' ? 1 : -1,
+                unknown: +parts[5]!,
+                seq: sequence,
+              }
             }
           }
         }

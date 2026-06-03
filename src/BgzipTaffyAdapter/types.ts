@@ -1,4 +1,4 @@
-import type VirtualOffset from './virtualOffset'
+import VirtualOffset from './virtualOffset'
 
 // Re-export AlignmentRecord from central types for convenience
 export type { AlignmentRecord } from '../types'

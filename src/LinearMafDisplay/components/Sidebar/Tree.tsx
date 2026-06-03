@@ -2,10 +2,9 @@ import React, { useCallback, useMemo } from 'react'
 
 import { observer } from 'mobx-react'
 
-import { descendants, links } from '../../hierarchy'
-
-import type { HierarchyNode } from '../../hierarchy'
 import type { LinearMafDisplayModel } from '../../stateModel'
+import type { NodeWithIdsAndLength } from '../../types'
+import type { HierarchyNode } from 'd3-hierarchy'
 
 const hitboxStyle = {
   pointerEvents: 'all',
@@ -31,14 +30,14 @@ const Tree = observer(function ({ model }: { model: LinearMafDisplayModel }) {
 
   const nodeHandlers = useMemo(() => {
     const handlers = new Map<
-      HierarchyNode,
+      HierarchyNode<NodeWithIdsAndLength>,
       {
         onMouseEnter: () => void
         onClick: (event: React.MouseEvent) => void
       }
     >()
     if (hierarchy) {
-      for (const node of descendants(hierarchy)) {
+      for (const node of hierarchy.descendants()) {
         const names = nodeDescendantNames.get(node)
         handlers.set(node, {
           onMouseEnter: () => {
@@ -61,16 +60,18 @@ const Tree = observer(function ({ model }: { model: LinearMafDisplayModel }) {
       }
     }
     return handlers
-  }, [model, hierarchy, nodeDescendantNames])
+  }, [model, hierarchy, nodeDescendantNames, treeAreaWidth])
 
   return (
     <>
       {hierarchy
-        ? links(hierarchy).map(link => {
+        ? [...hierarchy.links()].map(link => {
             const { source, target } = link
             const sy = source.x!
             const ty = target.x!
+            // @ts-expect-error
             const tx = showBranchLen ? target.len : target.y
+            // @ts-expect-error
             const sx = showBranchLen ? source.len : source.y
 
             const sourceHandlers = nodeHandlers.get(source)

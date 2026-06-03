@@ -1,9 +1,7 @@
-import { SimpleFeature } from '@jbrowse/core/util'
+import { Feature, SimpleFeature } from '@jbrowse/core/util'
 import { expect, test } from 'vitest'
 
 import { processFeaturesToFasta } from './fastaUtils'
-
-import type { Feature } from '@jbrowse/core/util'
 
 function makeMap(features: Feature[]) {
   return new Map(features.map(f => [f.id(), f]))

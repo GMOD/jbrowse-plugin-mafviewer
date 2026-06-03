@@ -1,23 +1,27 @@
 import { unzip } from '@gmod/bgzf-filehandle'
-import { BaseFeatureDataAdapter } from '@jbrowse/core/data_adapters/BaseAdapter'
-import { updateStatus } from '@jbrowse/core/util'
+import {
+  BaseFeatureDataAdapter,
+  BaseOptions,
+} from '@jbrowse/core/data_adapters/BaseAdapter'
+import { Feature, Region, updateStatus } from '@jbrowse/core/util'
 import { openLocation } from '@jbrowse/core/util/io'
 import { ObservableCreate } from '@jbrowse/core/util/rxjs'
 
+import VirtualOffset from './virtualOffset'
 import {
   filterFirstLineInstructions,
   parseRowInstructions,
 } from './rowInstructions'
-import VirtualOffset from './virtualOffset'
 import MafFeature from '../MafFeature'
+import {
+  matchSampleId,
+  parseAssemblyAndChrSimple,
+} from '../util/parseAssemblyName'
 import { getSamplesFromConfig } from '../util/getSamples'
-import { parseAssemblyAndChrSimple } from '../util/parseAssemblyName'
 
 import type { RowInstruction } from './rowInstructions'
 import type { AlignmentRecord, IndexData } from './types'
 import type { MafAdapterOptions } from '../types'
-import type { BaseOptions } from '@jbrowse/core/data_adapters/BaseAdapter'
-import type { Feature, Region } from '@jbrowse/core/util'
 
 // Represents a row in the alignment (like Alignment_Row in C)
 interface RowState {
@@ -249,6 +253,22 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     }
   }
 
+  // Non-streaming version for backward compatibility (used in tests)
+  parseTafBlocks(
+    buffer: Uint8Array,
+    runLengthEncodeBases: boolean,
+    _opts?: BaseOptions,
+    sampleFilter?: Set<string>,
+  ): TafFeature[] {
+    return [
+      ...this.parseTafBlocksStreaming(
+        buffer,
+        runLengthEncodeBases,
+        sampleFilter,
+      ),
+    ]
+  }
+
   // TextDecoder for efficient string building from typed array
   private decoder = new TextDecoder('ascii')
 
@@ -291,16 +311,19 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     const alignments: Record<string, AlignmentRecord> = {}
 
     for (const row of block.rows) {
-      const { assemblyName, chr } = parseAssemblyAndChrSimple(row.sequenceName)
-      if (sampleFilter && !sampleFilter.has(assemblyName)) {
-        continue
-      }
-      alignments[assemblyName] = {
-        chr,
-        start: row.start,
-        srcSize: row.sequenceLength,
-        strand: row.strand,
-        seq: row.bases,
+      // Known set → resolve the token against it so haplotype-suffixed names
+      // (`Species1.1`) match exactly. No set → dot-position split.
+      const parsed = sampleFilter
+        ? matchSampleId(row.sequenceName, sampleFilter)
+        : parseAssemblyAndChrSimple(row.sequenceName)
+      if (parsed?.assemblyName) {
+        alignments[parsed.assemblyName] = {
+          chr: parsed.chr,
+          start: row.start,
+          srcSize: row.sequenceLength,
+          strand: row.strand,
+          seq: row.bases,
+        }
       }
     }
 
@@ -325,7 +348,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   }
 
   setup(opts?: BaseOptions) {
-    const { statusCallback = () => {} } = opts ?? {}
+    const { statusCallback = () => {} } = opts || {}
     return updateStatus('Downloading index', statusCallback, () =>
       this.setupPre(),
     )
@@ -363,7 +386,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
     const lines = text
       .split('\n')
       .map(f => f.trim())
-      .filter(line => line !== '')
+      .filter(line => !!line)
     const entries = {} as IndexData
     let lastChr = ''
     let lastChrStart = 0
@@ -398,7 +421,7 @@ export default class BgzipTaffyAdapter extends BaseFeatureDataAdapter {
   }
 
   getFeatures(query: Region, opts?: MafAdapterOptions) {
-    const { statusCallback = () => {} } = opts ?? {}
+    const { statusCallback = () => {} } = opts || {}
     return ObservableCreate<Feature>(async observer => {
       try {
         const { index, runLengthEncodeBases } = await this.setup(opts)

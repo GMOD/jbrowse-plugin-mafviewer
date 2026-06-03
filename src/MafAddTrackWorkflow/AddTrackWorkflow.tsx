@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 
 import { ErrorMessage, FileSelector } from '@jbrowse/core/ui'
 import {
+  FileLocation,
   getSession,
   isSessionModelWithWidgets,
   isSessionWithAddTracks,
@@ -19,7 +20,6 @@ import {
 } from '@mui/material'
 import { makeStyles } from 'tss-react/mui'
 
-import type { FileLocation } from '@jbrowse/core/util'
 import type { AddTrackModel } from '@jbrowse/plugin-data-management'
 
 const useStyles = makeStyles()(theme => ({

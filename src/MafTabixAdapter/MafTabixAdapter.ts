@@ -1,19 +1,21 @@
-import { BaseFeatureDataAdapter } from '@jbrowse/core/data_adapters/BaseAdapter'
-import { updateStatus } from '@jbrowse/core/util'
+import {
+  BaseFeatureDataAdapter,
+  BaseOptions,
+} from '@jbrowse/core/data_adapters/BaseAdapter'
+import { Feature, Region, updateStatus } from '@jbrowse/core/util'
 import { ObservableCreate } from '@jbrowse/core/util/rxjs'
 import { getSnapshot } from '@jbrowse/mobx-state-tree'
 
 import MafFeature from '../MafFeature'
-import { getSamplesFromConfig } from '../util/getSamples'
 import { subscribeToObservable } from '../util/observableUtils'
 import {
+  matchSampleId,
   parseAssemblyAndChr,
   selectReferenceSequenceString,
 } from '../util/parseAssemblyName'
+import { getSamplesFromConfig } from '../util/getSamples'
 
 import type { AlignmentRecord, MafAdapterOptions } from '../types'
-import type { BaseOptions } from '@jbrowse/core/data_adapters/BaseAdapter'
-import type { Feature, Region } from '@jbrowse/core/util'
 
 export default class MafTabixAdapter extends BaseFeatureDataAdapter {
   public setupP?: Promise<{ adapter: BaseFeatureDataAdapter }>
@@ -33,7 +35,7 @@ export default class MafTabixAdapter extends BaseFeatureDataAdapter {
   }
 
   async setupPre(opts?: BaseOptions) {
-    const { statusCallback = () => {} } = opts ?? {}
+    const { statusCallback = () => {} } = opts || {}
     if (!this.setupP) {
       this.setupP = updateStatus('Downloading index', statusCallback, () =>
         this.setup(),
@@ -61,7 +63,7 @@ export default class MafTabixAdapter extends BaseFeatureDataAdapter {
       let firstAssemblyNameFound = ''
       const refAssemblyName = this.getConf('refAssemblyName')
 
-      const sampleFilter = opts?.samples
+      const sampleIds = opts?.samples
         ? new Set(opts.samples.map(s => s.id))
         : undefined
 
@@ -86,15 +88,16 @@ export default class MafTabixAdapter extends BaseFeatureDataAdapter {
             continue
           }
 
-          const { assemblyName, chr } = parseAssemblyAndChr(assemblyAndChr)
+          // Known set → resolve the token against it so haplotype-suffixed
+          // names (`Species1.1`) match exactly. No set → dot-position split.
+          const parsed = sampleIds
+            ? matchSampleId(assemblyAndChr, sampleIds)
+            : parseAssemblyAndChr(assemblyAndChr)
 
-          if (assemblyName) {
+          if (parsed?.assemblyName) {
+            const { assemblyName, chr } = parsed
             if (!firstAssemblyNameFound) {
               firstAssemblyNameFound = assemblyName
-            }
-
-            if (sampleFilter && !sampleFilter.has(assemblyName)) {
-              continue
             }
 
             alignments[assemblyName] = {

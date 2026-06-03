@@ -113,8 +113,8 @@ export function useDragSelection(
           setContextCoord({
             coord: [event.clientX, event.clientY],
             dragEndX: event.clientX - left,
-            dragStartX,
-            dragStartY,
+            dragStartX: dragStartX,
+            dragStartY: dragStartY,
             dragEndY: event.clientY - top,
           })
           setShowSelectionBox(true)

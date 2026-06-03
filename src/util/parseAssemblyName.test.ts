@@ -1,10 +1,48 @@
 import { describe, expect, test } from 'vitest'
 
 import {
+  matchSampleId,
   parseAssemblyAndChr,
   parseAssemblyAndChrSimple,
   selectReferenceSequenceString,
 } from './parseAssemblyName'
+
+describe('matchSampleId (sample-set aware splitting)', () => {
+  const samples = new Set(['Species1.1', 'Species1.2', 'mm10'])
+
+  test('haplotype-suffixed sample with a contig', () => {
+    expect(matchSampleId('Species1.1.chr3', samples)).toEqual({
+      assemblyName: 'Species1.1',
+      chr: 'chr3',
+    })
+  })
+
+  test('bare sample token with no contig (regression: do not drop .1)', () => {
+    expect(matchSampleId('Species1.1', samples)).toEqual({
+      assemblyName: 'Species1.1',
+      chr: '',
+    })
+  })
+
+  test('longest matching prefix wins', () => {
+    const overlapping = new Set(['Species1', 'Species1.1'])
+    expect(matchSampleId('Species1.1.chr3', overlapping)).toEqual({
+      assemblyName: 'Species1.1',
+      chr: 'chr3',
+    })
+  })
+
+  test('falls through to a shorter (bare-species) sample id', () => {
+    expect(matchSampleId('Species1.1.chr3', new Set(['Species1']))).toEqual({
+      assemblyName: 'Species1',
+      chr: '1.chr3',
+    })
+  })
+
+  test('token belonging to no configured sample is skipped', () => {
+    expect(matchSampleId('Species9.1.chr3', samples)).toBeUndefined()
+  })
+})
 
 describe('parseAssemblyAndChr (MafTabix format)', () => {
   test('no dot - entire string is assembly name', () => {

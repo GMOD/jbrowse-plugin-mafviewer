@@ -8,3 +8,11 @@ export interface NodeWithIds {
   length?: number
   noTree?: boolean
 }
+
+export interface NodeWithIdsAndLength {
+  id: string
+  name: string
+  children?: NodeWithIdsAndLength[]
+  noTree?: boolean
+  length: number
+}

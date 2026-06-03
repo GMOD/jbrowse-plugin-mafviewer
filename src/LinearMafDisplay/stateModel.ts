@@ -2,6 +2,7 @@ import { lazy } from 'react'
 
 import { ConfigurationReference, getConf } from '@jbrowse/core/configuration'
 import {
+  SessionWithWidgets,
   getContainingTrack,
   getContainingView,
   getEnv,
@@ -11,33 +12,23 @@ import {
 } from '@jbrowse/core/util'
 import { getRpcSessionId } from '@jbrowse/core/util/tracks'
 import { addDisposer, cast, isAlive, types } from '@jbrowse/mobx-state-tree'
+import { ascending } from 'd3-array'
+import { cluster, hierarchy } from 'd3-hierarchy'
 import deepEqual from 'fast-deep-equal'
 import { autorun } from 'mobx'
 
-import {
-  assignDepthY,
-  eachAfter,
-  hierarchy,
-  leaves,
-  maxLength,
-  setBrLength,
-  sort,
-  sum,
-} from './hierarchy'
-import { computeNodeDescendantNames } from './util'
+import { computeNodeDescendantNames, maxLength, setBrLength } from './util'
 import { normalize } from '../util'
 
-import type { HierarchyNode } from './hierarchy'
-import type { NodeWithIds, Sample } from './types'
+import type { NodeWithIds, NodeWithIdsAndLength, Sample } from './types'
 import type PluginManager from '@jbrowse/core/PluginManager'
 import type {
   AnyConfigurationModel,
   AnyConfigurationSchemaType,
 } from '@jbrowse/core/configuration'
-import type { SessionWithWidgets } from '@jbrowse/core/util'
 import type { Instance } from '@jbrowse/mobx-state-tree'
-import type LinearGenomeViewPlugin from '@jbrowse/plugin-linear-genome-view'
 import type { ExportSvgDisplayOptions } from '@jbrowse/plugin-linear-genome-view'
+import type { HierarchyNode } from 'd3-hierarchy'
 
 const defaultRowHeight = 15
 const defaultRowProportion = 0.8
@@ -62,7 +53,7 @@ export default function stateModelFactory(
 ) {
   const LinearGenomePlugin = pluginManager.getPlugin(
     'LinearGenomeViewPlugin',
-  ) as LinearGenomeViewPlugin
+  ) as import('@jbrowse/plugin-linear-genome-view').default
   const { BaseLinearDisplay } = LinearGenomePlugin.exports
 
   return types
@@ -313,27 +304,39 @@ export default function stateModelFactory(
         if (self.subtreeFilter && self.subtreeFilter.length > 0) {
           const filterSet = new Set(self.subtreeFilter)
 
-          const getLeafNames = (n: NodeWithIds): string[] =>
-            !n.children?.length
-              ? n.name
-                ? [n.name]
-                : []
-              : n.children.flatMap(child => getLeafNames(child))
-
+          // Find the node whose descendants match the filter
           const findSubtreeRoot = (
             node: NodeWithIds,
           ): NodeWithIds | undefined => {
+            const getLeafNames = (n: NodeWithIds): string[] => {
+              if (!n.children || n.children.length === 0) {
+                return n.name ? [n.name] : []
+              }
+              const names: string[] = []
+              for (const child of n.children) {
+                for (const name of getLeafNames(child)) {
+                  names.push(name)
+                }
+              }
+              return names
+            }
+
             const leafNames = getLeafNames(node)
-            if (
+            const allMatch =
               leafNames.length === filterSet.size &&
               leafNames.every(name => filterSet.has(name))
-            ) {
+
+            if (allMatch) {
               return node
             }
-            for (const child of node.children ?? []) {
-              const found = findSubtreeRoot(child)
-              if (found) {
-                return found
+
+            // Search children
+            if (node.children) {
+              for (const child of node.children) {
+                const found = findSubtreeRoot(child)
+                if (found) {
+                  return found
+                }
               }
             }
             return undefined
@@ -345,10 +348,9 @@ export default function stateModelFactory(
           }
         }
 
-        const root = hierarchy(treeData, d => d.children)
-        sum(root, d => (d.children?.length ? 0 : 1))
-        sort(root, (a, b) => (a.data.length || 1) - (b.data.length || 1))
-        return root
+        return hierarchy(treeData, d => d.children)
+          .sum(d => (d.children?.length ? 0 : 1))
+          .sort((a, b) => ascending(a.data.length || 1, b.data.length || 1))
       },
     }))
     .views(self => ({
@@ -356,36 +358,39 @@ export default function stateModelFactory(
        * #getter
        * generates a new tree that is clustered with x,y positions
        */
-      get hierarchy(): HierarchyNode | undefined {
+      get hierarchy(): HierarchyNode<NodeWithIdsAndLength> | undefined {
         const r = self.root
-        if (!r) {
+        if (r) {
+          const width = self.treeAreaWidth
+          const clust = cluster<NodeWithIds>()
+            .size([this.totalHeight - self.rowHeight, width])
+            .separation(() => 1)
+          clust(r)
+
+          // D3's cluster centers leaves within the size and uses spacing of
+          // size*(n-1)/n instead of size/(n-1), which doesn't give us exact
+          // rowHeight spacing. We need leaves at exact multiples of rowHeight
+          // to align with the renderer's row positioning, so we manually
+          // assign leaf positions and recompute internal node positions.
+          const leaves = r.leaves()
+          for (let i = 0; i < leaves.length; i++) {
+            leaves[i]!.x = i * self.rowHeight + self.rowHeight / 2
+          }
+          // Recompute internal node x as midpoint of children (bottom-up)
+          r.eachAfter(node => {
+            if (node.children && node.children.length > 0) {
+              node.x =
+                (node.children[0]!.x! +
+                  node.children[node.children.length - 1]!.x!) /
+                2
+            }
+          })
+          r.data.length = 0
+          setBrLength(r, 0, width / maxLength(r))
+          return r as HierarchyNode<NodeWithIdsAndLength>
+        } else {
           return undefined
         }
-
-        const width = self.treeAreaWidth
-
-        // Assign y positions based on depth (root=0, leaves=width)
-        assignDepthY(r, width)
-
-        // Assign x positions for leaves at exact rowHeight multiples so they
-        // align with the renderer's row positioning
-        const leafNodes = leaves(r)
-        for (let i = 0; i < leafNodes.length; i++) {
-          leafNodes[i]!.x = i * self.rowHeight + self.rowHeight / 2
-        }
-        // Recompute internal node x as midpoint of first/last child (bottom-up)
-        eachAfter(r, node => {
-          if (node.children?.length) {
-            node.x =
-              (node.children[0]!.x! +
-                node.children[node.children.length - 1]!.x!) /
-              2
-          }
-        })
-
-        r.data.length = 0
-        setBrLength(r, 0, width / maxLength(r))
-        return r
       },
       /**
        * #getter
@@ -398,8 +403,8 @@ export default function stateModelFactory(
             : undefined
           samples = normalize(this.rowNames).map(r => ({
             ...r,
-            label: volatileSamplesMap?.[r.id]?.label ?? r.label,
-            color: volatileSamplesMap?.[r.id]?.color ?? r.color,
+            label: volatileSamplesMap?.[r.id]?.label || r.label,
+            color: volatileSamplesMap?.[r.id]?.color || r.color,
           }))
         } else {
           samples = self.volatileSamples
@@ -422,7 +427,7 @@ export default function stateModelFactory(
        * #getter
        */
       get leaves() {
-        return self.root ? leaves(self.root) : undefined
+        return self.root?.leaves()
       },
       /**
        * #getter
@@ -438,7 +443,7 @@ export default function stateModelFactory(
         if (this.hierarchy) {
           return computeNodeDescendantNames(this.hierarchy)
         }
-        return new Map<HierarchyNode, string[]>()
+        return new Map<HierarchyNode<NodeWithIdsAndLength>, string[]>()
       },
       /**
        * #getter
@@ -449,8 +454,9 @@ export default function stateModelFactory(
     }))
     .views(self => {
       const {
+        // eslint-disable-next-line @typescript-eslint/unbound-method
         trackMenuItems: superTrackMenuItems,
-
+        // eslint-disable-next-line @typescript-eslint/unbound-method
         renderProps: superRenderProps,
       } = self
       return {
@@ -668,6 +674,7 @@ export default function stateModelFactory(
       },
     }))
     .actions(self => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       const { renderSvg: superRenderSvg } = self
       return {
         /**
