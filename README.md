@@ -228,12 +228,17 @@ you should add the species name to the scaffold/chromosome names (e.g. create
 hg38.chr1 if it was just chr1 before).
 
 If all is well, your BED file should have 6 columns, with
-`chr, start, end, id, score, alignment_data`, where `alignment_data` is
-separated between each species by `;` and each field in the alignment is
-separated by `:`.
+`chr, start, end, id, score, alignment_data`, where `alignment_data` lists every
+row of the alignment block separated by `,`, and each row is
+`src:start:size:strand:srcSize:seq` separated by `:`.
+
+Blocks that have no row of the assembly you named are skipped, so the reference
+species has to appear in a block for that block to reach the BED. A MAF whose
+blocks are each rooted on a different genome needs re-rooting first.
 
 Note: If you can't use the `cargo install maf2bed` binary, there is a
-`bin/maf2bed.pl` perl version of it in this repo
+`bin/maf2bed.pl` perl version of it in this repo, which produces identical
+output.
 
 ### Option 3. Preparing TAF (Taffy)
 
